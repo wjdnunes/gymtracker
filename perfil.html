@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#f97316" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+  <title>GymTracker — Perfil</title>
+  <link rel="stylesheet" href="css/global.css" />
+  <style>
+    .content { padding: 32px 0 64px; max-width: 600px; }
+
+    @media (max-width: 768px) {
+      .content { padding: 20px 0 48px; }
+    }
+
+    .avatar-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .avatar-circle {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: var(--orange-glow);
+      color: var(--orange);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .avatar-row .email {
+      color: var(--text-2);
+      font-size: 13px;
+      margin-top: 2px;
+    }
+
+    .form-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .save-bar {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 24px;
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar">
+    <a class="navbar-brand" href="/dashboard.html">Gym<span>Tracker</span></a>
+    <div class="navbar-nav">
+      <a href="/dashboard.html">Início</a>
+      <a href="/biblioteca.html">Biblioteca</a>
+      <a href="/fichas.html">Fichas</a>
+      <a href="/treino.html">Treinar</a>
+      <a href="/historico.html">Histórico</a>
+      <a href="/relatorio.html">Relatório</a>
+      <a href="/perfil.html" class="active">Perfil</a>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="sair()">Sair</button>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="content">
+
+      <div class="page-header">
+        <h1>Meu Perfil</h1>
+        <p>Suas informações pessoais e objetivo de treino</p>
+      </div>
+
+      <div class="avatar-row">
+        <div class="avatar-circle" id="avatar-letra">—</div>
+        <div>
+          <div id="perfil-nome" style="font-weight:600;font-size:15px">—</div>
+          <div class="email" id="perfil-email">—</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Dados pessoais</div>
+
+        <div class="form-grid mt-16">
+          <div class="form-group">
+            <label for="f-nome">Nome</label>
+            <input type="text" id="f-nome" placeholder="Seu nome" />
+          </div>
+
+          <div class="grid-2">
+            <div class="form-group">
+              <label for="f-peso">Peso (kg)</label>
+              <input type="number" id="f-peso" step="0.1" min="0" placeholder="Ex: 78.5" />
+            </div>
+            <div class="form-group">
+              <label for="f-altura">Altura (cm)</label>
+              <input type="number" id="f-altura" step="1" min="0" placeholder="Ex: 178" />
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="form-group">
+              <label for="f-objetivo">Objetivo</label>
+              <select id="f-objetivo">
+                <option value="">Selecione...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="f-nivel">Nível</label>
+              <select id="f-nivel">
+                <option value="">Selecione...</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="save-bar">
+          <button class="btn btn-primary" id="btn-salvar" onclick="salvarPerfil()">Salvar alterações</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:24px">
+        <div class="card-title">Evolução de peso</div>
+        <p style="color:var(--text-2);font-size:13px;margin:6px 0 16px">
+          Registre seu peso de vez em quando pra acompanhar a evolução ao longo do tempo.
+        </p>
+
+        <div class="grid-2" style="align-items:flex-end">
+          <div class="form-group">
+            <label for="m-peso">Peso de hoje (kg)</label>
+            <input type="number" id="m-peso" step="0.1" min="0" placeholder="Ex: 78.5" />
+          </div>
+          <button class="btn btn-primary" onclick="registrarMedidaHoje()" style="height:44px">+ Registrar</button>
+        </div>
+
+        <div id="medida-chart-wrap" style="display:none;margin-top:20px;height:180px">
+          <canvas id="chart-peso"></canvas>
+        </div>
+
+        <div id="medidas-lista" style="margin-top:16px"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script type="module">
+    import { supabase, requireAuth, showToast } from './js/supabase.js';
+    import { ProfileService } from './js/ProfileService.js';
+
+    const user = await requireAuth();
+    if (!user) { window.location.href = '/index.html'; throw new Error('unauth'); }
+    let chartPeso = null;
+
+    async function carregarMedidas() {
+      const medidas = await ProfileService.listarMedidas(user.id, 90);
+      const wrap = document.getElementById('medida-chart-wrap');
+      const lista = document.getElementById('medidas-lista');
+
+      if (!medidas.length) {
+        wrap.style.display = 'none';
+        lista.innerHTML = `<div style="color:var(--text-3);text-align:center;padding:16px;font-size:13px">Nenhum registro ainda.</div>`;
+        return;
+      }
+
+      // Gráfico (ordem cronológica, mais antigo primeiro)
+      const ordenado = [...medidas].reverse();
+      wrap.style.display = 'block';
+      const ctx = document.getElementById('chart-peso');
+      const labels = ordenado.map(m => new Date(m.data_medicao + 'T00:00:00').toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' }));
+      const valores = ordenado.map(m => m.peso_kg);
+
+      if (chartPeso) chartPeso.destroy();
+      chartPeso = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets: [{ data: valores, borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,0.08)', borderWidth: 2, pointBackgroundColor: '#f97316', pointRadius: 3, tension: 0.3, fill: true }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: '#606060', font: { size: 10 } } },
+            y: { grid: { color: '#262626' }, ticks: { color: '#606060', font: { size: 10 } } }
+          }
+        }
+      });
+
+      // Lista (mais recente primeiro)
+      lista.innerHTML = medidas.slice(0, 10).map(m => {
+        const data = new Date(m.data_medicao + 'T00:00:00').toLocaleDateString('pt-BR', { weekday:'short', day:'numeric', month:'short' });
+        return `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px">
+            <span style="color:var(--text-2)">${data}</span>
+            <span style="font-weight:600">${m.peso_kg} kg</span>
+            <button class="icon-btn" onclick="excluirMedida('${m.id}')" title="Excluir">🗑</button>
+          </div>`;
+      }).join('');
+    }
+
+    window.registrarMedidaHoje = async () => {
+      const peso = parseFloat(document.getElementById('m-peso').value);
+      if (!peso) { showToast('Informe o peso', 'erro'); return; }
+      try {
+        await ProfileService.registrarMedida(user.id, { peso_kg: peso });
+        document.getElementById('m-peso').value = '';
+        document.getElementById('f-peso').value = peso; // mantém o form de cima em sincronia visualmente
+        showToast('Peso registrado!', 'sucesso');
+        await carregarMedidas();
+      } catch (err) {
+        showToast('Erro ao registrar: ' + err.message, 'erro');
+      }
+    };
+
+    window.excluirMedida = async (id) => {
+      if (!confirm('Remover este registro?')) return;
+      try {
+        await ProfileService.excluirMedida(id);
+        await carregarMedidas();
+      } catch (err) {
+        showToast('Erro ao excluir: ' + err.message, 'erro');
+      }
+    };
+
+    async function init() {
+      // Cabeçalho com nome/email
+      document.getElementById('perfil-email').textContent = user.email || '—';
+
+      // Popular os selects de objetivo e nível
+      const [objetivos, niveis] = await Promise.all([
+        ProfileService.listarObjetivos(),
+        ProfileService.listarNiveis()
+      ]);
+
+      const selObjetivo = document.getElementById('f-objetivo');
+      objetivos.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o.id;
+        opt.textContent = o.name;
+        selObjetivo.appendChild(opt);
+      });
+
+      const selNivel = document.getElementById('f-nivel');
+      niveis.forEach(n => {
+        const opt = document.createElement('option');
+        opt.value = n.id;
+        opt.textContent = n.name;
+        selNivel.appendChild(opt);
+      });
+
+      // Carregar perfil existente (pode ainda não existir)
+      let perfil = await ProfileService.obterPerfil(user.id);
+      if (!perfil) {
+        perfil = await ProfileService.garantirPerfil(user.id);
+      }
+
+      const nome = perfil?.nome || '';
+      document.getElementById('f-nome').value = nome;
+      document.getElementById('f-peso').value = perfil?.peso_kg ?? '';
+      document.getElementById('f-altura').value = perfil?.altura_cm ?? '';
+      document.getElementById('f-objetivo').value = perfil?.objetivo_id || '';
+      document.getElementById('f-nivel').value = perfil?.nivel_id || '';
+
+      const nomeExibicao = nome || user.email || 'Usuário';
+      document.getElementById('perfil-nome').textContent = nomeExibicao;
+      document.getElementById('avatar-letra').textContent = nomeExibicao.charAt(0).toUpperCase();
+    }
+
+    window.salvarPerfil = async () => {
+      const btn = document.getElementById('btn-salvar');
+      btn.disabled = true;
+      btn.textContent = 'Salvando...';
+
+      try {
+        const payload = {
+          nome: document.getElementById('f-nome').value.trim() || null,
+          peso_kg: parseFloat(document.getElementById('f-peso').value) || null,
+          altura_cm: parseFloat(document.getElementById('f-altura').value) || null,
+          objetivo_id: document.getElementById('f-objetivo').value || null,
+          nivel_id: document.getElementById('f-nivel').value || null
+        };
+
+        await ProfileService.atualizarPerfil(user.id, payload);
+        showToast('Perfil atualizado!', 'sucesso');
+
+        const nomeExibicao = payload.nome || user.email || 'Usuário';
+        document.getElementById('perfil-nome').textContent = nomeExibicao;
+        document.getElementById('avatar-letra').textContent = nomeExibicao.charAt(0).toUpperCase();
+      } catch (err) {
+        showToast('Erro ao salvar: ' + err.message, 'erro');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Salvar alterações';
+      }
+    };
+
+    window.sair = async () => {
+      await supabase.auth.signOut();
+      window.location.href = '/index.html';
+    };
+
+    init();
+    carregarMedidas();
+  </script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
+    }
+  </script>
+</body>
+</html>

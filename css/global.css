@@ -1,0 +1,343 @@
+/* ============================================================
+   GymTracker — global.css
+   Dark mode academia. Acento laranja. Tipografia Inter.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800&display=swap');
+
+/* ── Tokens ─────────────────────────────────────────────── */
+:root {
+  --bg:          #121212;
+  --bg-2:        #1c1c1c;
+  --bg-3:        #262626;
+  --bg-4:        #303030;
+  --border:      #323232;
+  --border-2:    #424242;
+
+  --orange:      #f97316;
+  --orange-dim:  #7c3a0f;
+  --orange-glow: rgba(249,115,22,0.15);
+
+  --text:        #f0f0f0;
+  --text-2:      #a0a0a0;
+  --text-3:      #606060;
+
+  --green:       #22c55e;
+  --red:         #ef4444;
+  --blue:        #3b82f6;
+  --yellow:      #eab308;
+
+  --radius:      12px;
+  --radius-lg:   16px;
+  --shadow:      0 2px 12px rgba(0,0,0,0.5);
+}
+
+/* ── Reset ───────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Tipografia ──────────────────────────────────────────── */
+h1, h2, h3 {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+h1 { font-size: 2.4rem; }
+h2 { font-size: 1.6rem; }
+h3 { font-size: 1.1rem; }
+
+/* ── Layout base ─────────────────────────────────────────── */
+.page-wrapper {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ── Navbar ──────────────────────────────────────────────── */
+.navbar {
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.navbar-brand {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.navbar-brand span { color: var(--orange); }
+
+.navbar-nav {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.navbar-nav a {
+  color: var(--text-2);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  transition: all .15s;
+}
+
+.navbar-nav a:hover, .navbar-nav a.active {
+  color: var(--text);
+  background: var(--bg-3);
+}
+
+.navbar-nav a.active { color: var(--orange); }
+
+/* ── Cards ───────────────────────────────────────────────── */
+.card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+
+.card-sm {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+/* ── Botões ──────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all .15s;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--orange);
+  color: #fff;
+}
+.btn-primary:hover { background: #ea6a0a; transform: translateY(-1px); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-2);
+  border: 1px solid var(--border-2);
+}
+.btn-ghost:hover { background: var(--bg-3); color: var(--text); }
+
+.btn-danger {
+  background: transparent;
+  color: var(--red);
+  border: 1px solid var(--red);
+}
+.btn-danger:hover { background: rgba(239,68,68,0.1); }
+
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn-lg { padding: 12px 24px; font-size: 15px; }
+.btn-full { width: 100%; justify-content: center; }
+
+.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+
+/* ── Formulários ─────────────────────────────────────────── */
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group label { font-size: 12px; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; }
+
+input, select, textarea {
+  background: var(--bg-3);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  padding: 10px 14px;
+  width: 100%;
+  outline: none;
+  transition: border-color .15s;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--orange);
+}
+
+input::placeholder, textarea::placeholder { color: var(--text-3); }
+
+select option { background: var(--bg-3); }
+
+/* ── Grid helpers ────────────────────────────────────────── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.flex   { display: flex; }
+.flex-center { display: flex; align-items: center; }
+.flex-between { display: flex; align-items: center; justify-content: space-between; }
+.gap-8  { gap: 8px; }
+.gap-12 { gap: 12px; }
+.gap-16 { gap: 16px; }
+.gap-24 { gap: 24px; }
+.mt-8   { margin-top: 8px; }
+.mt-16  { margin-top: 16px; }
+.mt-24  { margin-top: 24px; }
+.mt-32  { margin-top: 32px; }
+
+/* ── Badges ──────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge-orange { background: var(--orange-glow); color: var(--orange); }
+.badge-green  { background: rgba(34,197,94,0.15); color: var(--green); }
+.badge-red    { background: rgba(239,68,68,0.15); color: var(--red); }
+.badge-gray   { background: var(--bg-4); color: var(--text-2); }
+
+/* ── Página header ───────────────────────────────────────── */
+.page-header {
+  padding: 32px 0 24px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 32px;
+}
+
+.page-header h1 { line-height: 1; }
+.page-header p { color: var(--text-2); margin-top: 6px; }
+
+/* ── Empty state ─────────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: 64px 24px;
+  color: var(--text-3);
+}
+
+.empty-state .icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.4;
+}
+
+.empty-state p { margin-bottom: 20px; color: var(--text-2); }
+
+/* ── Modal ───────────────────────────────────────────────── */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.7);
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.modal-overlay.open { display: flex; }
+
+.modal {
+  background: var(--bg-2);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--text-2);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+.modal-close:hover { color: var(--text); }
+
+/* ── Toast animação ──────────────────────────────────────── */
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Scrollbar ───────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+
+/* ── Responsivo (celular) ────────────────────────────────────
+   Regras genéricas que valem pra qualquer página que usa este
+   CSS. Páginas com layout próprio (ex: grids fixos definidos no
+   <style> de cada .html) têm ajustes extras no próprio arquivo. */
+@media (max-width: 768px) {
+  .page-wrapper { padding: 0 16px; }
+
+  h1 { font-size: 1.7rem; }
+  h2 { font-size: 1.3rem; }
+
+  .page-header { padding: 20px 0 16px; margin-bottom: 20px; }
+
+  /* Navbar: em vez de quebrar/cortar os links, vira uma faixa
+     que rola na horizontal (arrasta com o dedo). */
+  .navbar { padding: 0 12px; gap: 8px; }
+  .navbar-brand { font-size: 1.1rem; flex-shrink: 0; }
+  .navbar-nav {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex: 1;
+    justify-content: flex-start;
+  }
+  .navbar-nav::-webkit-scrollbar { display: none; }
+  .navbar-nav a { padding: 6px 10px; font-size: 12px; white-space: nowrap; }
+
+  /* Grids genéricos empilham numa coluna só */
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+
+  .modal { padding: 20px; max-height: 95vh; }
+
+  .card { padding: 16px; }
+}
+
+@media (max-width: 420px) {
+  .navbar-brand { font-size: 1rem; }
+}

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#f97316" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+  <title>GymTracker — Login</title>
+  <link rel="stylesheet" href="css/global.css" />
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: var(--bg);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Grade decorativa de fundo */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 40px 40px;
+      opacity: 0.3;
+      pointer-events: none;
+    }
+
+    /* Brilho laranja no canto */
+    body::after {
+      content: '';
+      position: fixed;
+      top: -200px;
+      right: -200px;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(249,115,22,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .login-container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 400px;
+      padding: 24px;
+    }
+
+    .login-logo {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .login-logo .wordmark {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 2.8rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+
+    .login-logo .wordmark span { color: var(--orange); }
+
+    .login-logo .tagline {
+      font-size: 12px;
+      color: var(--text-3);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-top: 6px;
+    }
+
+    .login-card {
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+    }
+
+    .tabs {
+      display: flex;
+      background: var(--bg-3);
+      border-radius: var(--radius);
+      padding: 4px;
+      margin-bottom: 28px;
+      gap: 4px;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-2);
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 7px;
+      transition: all .15s;
+    }
+
+    .tab.active {
+      background: var(--bg-4);
+      color: var(--orange);
+    }
+
+    .form-section { display: none; flex-direction: column; gap: 16px; }
+    .form-section.active { display: flex; }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 8px 0;
+    }
+
+    #loading-indicator {
+      display: none;
+      text-align: center;
+      color: var(--text-2);
+      font-size: 13px;
+      padding: 8px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-logo">
+      <div class="wordmark">Gym<span>Tracker</span></div>
+      <div class="tagline">Evolua. Registre. Supere.</div>
+    </div>
+
+    <div class="login-card">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('login')">Entrar</button>
+        <button class="tab" onclick="switchTab('cadastro')">Criar conta</button>
+      </div>
+
+      <!-- LOGIN -->
+      <div id="form-login" class="form-section active">
+        <div class="form-group">
+          <label>E-mail</label>
+          <input type="email" id="login-email" placeholder="seu@email.com" />
+        </div>
+        <div class="form-group">
+          <label>Senha</label>
+          <input type="password" id="login-senha" placeholder="••••••••" />
+        </div>
+        <div id="loading-indicator">Entrando...</div>
+        <button class="btn btn-primary btn-full btn-lg" onclick="fazerLogin()">
+          Entrar
+        </button>
+      </div>
+
+      <!-- CADASTRO -->
+      <div id="form-cadastro" class="form-section">
+        <div class="form-group">
+          <label>Nome</label>
+          <input type="text" id="cad-nome" placeholder="Seu nome" />
+        </div>
+        <div class="form-group">
+          <label>E-mail</label>
+          <input type="email" id="cad-email" placeholder="seu@email.com" />
+        </div>
+        <div class="form-group">
+          <label>Senha</label>
+          <input type="password" id="cad-senha" placeholder="Mínimo 6 caracteres" />
+        </div>
+        <div id="loading-indicator-cad" style="display:none;text-align:center;color:var(--text-2);font-size:13px;padding:8px 0">Criando conta...</div>
+        <button class="btn btn-primary btn-full btn-lg" onclick="fazerCadastro()">
+          Criar conta
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase, showToast } from './js/supabase.js';
+
+    // Redirecionar se já logado
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) window.location.href = '/dashboard.html';
+
+    window.switchTab = (tab) => {
+      document.querySelectorAll('.tab').forEach((t, i) => {
+        t.classList.toggle('active', (i === 0) === (tab === 'login'));
+      });
+      document.getElementById('form-login').classList.toggle('active', tab === 'login');
+      document.getElementById('form-cadastro').classList.toggle('active', tab === 'cadastro');
+    };
+
+    window.fazerLogin = async () => {
+      const email = document.getElementById('login-email').value.trim();
+      const senha = document.getElementById('login-senha').value;
+
+      if (!email || !senha) return showToast('Preencha e-mail e senha', 'erro');
+
+      document.getElementById('loading-indicator').style.display = 'block';
+
+      const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
+
+      document.getElementById('loading-indicator').style.display = 'none';
+
+      if (error) return showToast('E-mail ou senha incorretos', 'erro');
+      window.location.href = '/dashboard.html';
+    };
+
+    window.fazerCadastro = async () => {
+      const nome  = document.getElementById('cad-nome').value.trim();
+      const email = document.getElementById('cad-email').value.trim();
+      const senha = document.getElementById('cad-senha').value;
+
+      if (!nome || !email || !senha) return showToast('Preencha todos os campos', 'erro');
+      if (senha.length < 6) return showToast('Senha deve ter pelo menos 6 caracteres', 'erro');
+
+      document.getElementById('loading-indicator-cad').style.display = 'block';
+
+      const { error } = await supabase.auth.signUp({
+        email, password: senha,
+        options: { data: { nome } }
+      });
+
+      document.getElementById('loading-indicator-cad').style.display = 'none';
+
+      if (error) return showToast(error.message, 'erro');
+      showToast('Conta criada! Verifique seu e-mail.', 'sucesso');
+    };
+
+    // Enter para submeter
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      const isLogin = document.getElementById('form-login').classList.contains('active');
+      if (isLogin) window.fazerLogin();
+      else window.fazerCadastro();
+    });
+  </script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
+    }
+  </script>
+</body>
+</html>

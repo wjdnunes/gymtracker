@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#f97316" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+  <title>GymTracker — Dashboard</title>
+  <link rel="stylesheet" href="css/global.css" />
+  <style>
+    .content { padding: 32px 0 64px; }
+
+    /* Splash screen (aparece só na primeira carga do PWA) */
+    #app-splash {
+      position: fixed;
+      inset: 0;
+      background: #0a0a0a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 9999;
+      transition: opacity 0.4s ease;
+    }
+    #app-splash img {
+      width: 96px;
+      height: 96px;
+      border-radius: 22px;
+    }
+    #app-splash .splash-nome {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 1.8rem;
+      letter-spacing: 0.02em;
+    }
+    #app-splash .splash-nome span { color: var(--orange); }
+    #app-splash .splash-sub {
+      color: var(--text-3);
+      font-size: 0.85rem;
+      margin-top: -12px;
+    }
+    #app-splash.hide {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .welcome-bar {
+      margin-bottom: 32px;
+    }
+    .welcome-bar h1 { font-size: 1.8rem; }
+    .welcome-bar p { color: var(--text-2); margin-top: 4px; }
+
+    /* Stats strip */
+    .stats-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .stat-card {
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+    }
+
+    .stat-card .label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-3);
+      margin-bottom: 8px;
+    }
+
+    .stat-card .value {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .stat-card .value.orange { color: var(--orange); }
+
+    .stat-card .sub {
+      font-size: 12px;
+      color: var(--text-3);
+      margin-top: 4px;
+    }
+
+    /* Seções principais */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 24px;
+    }
+
+    @media (max-width: 768px) {
+      .content { padding: 20px 0 48px; }
+      .stats-strip { grid-template-columns: repeat(2, 1fr); }
+      .main-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Fichas rápidas */
+    .ficha-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      background: var(--bg-3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      transition: border-color .15s;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .ficha-item:hover {
+      border-color: var(--orange);
+    }
+
+    .ficha-item-info { flex: 1; }
+    .ficha-item-nome { font-weight: 600; font-size: 15px; color: var(--text); }
+    .ficha-item-sub { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+
+    .ficha-item .arrow {
+      color: var(--text-3);
+      font-size: 18px;
+      transition: color .15s;
+    }
+    .ficha-item:hover .arrow { color: var(--orange); }
+
+    /* Sessões recentes */
+    .sessao-item {
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .sessao-item:last-child { border-bottom: none; }
+    .sessao-item-top { display: flex; justify-content: space-between; align-items: center; }
+    .sessao-item-nome { font-weight: 600; font-size: 14px; }
+    .sessao-item-data { font-size: 12px; color: var(--text-3); }
+    .sessao-item-meta { font-size: 12px; color: var(--text-2); margin-top: 4px; }
+
+    /* Quick action */
+    .quick-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .quick-action-btn {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 18px;
+      background: var(--bg-3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      text-decoration: none;
+      transition: all .15s;
+    }
+
+    .quick-action-btn:hover {
+      border-color: var(--orange);
+      background: var(--bg-4);
+    }
+
+    .quick-action-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .quick-action-icon.orange { background: var(--orange-glow); }
+    .quick-action-icon.green  { background: rgba(34,197,94,0.1); }
+    .quick-action-icon.blue   { background: rgba(59,130,246,0.1); }
+
+    .quick-action-text .title { font-weight: 600; font-size: 14px; color: var(--text); }
+    .quick-action-text .sub   { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-3);
+      margin-bottom: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Splash screen: some depois que a página carregar -->
+  <div id="app-splash">
+    <img src="/icons/icon-192.png" alt="GymTracker" />
+    <div class="splash-nome">GYM<span>TRACKER</span></div>
+    <div class="splash-sub">Train Smarter.</div>
+  </div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <a class="navbar-brand" href="/dashboard.html">Gym<span>Tracker</span></a>
+    <div class="navbar-nav">
+      <a href="/dashboard.html" class="active">Início</a>
+      <a href="/fichas.html">Fichas</a>
+      <a href="/treino.html">Treinar</a>
+      <a href="/historico.html">Histórico</a>
+      <a href="/relatorio.html">Relatório</a>
+      <a href="/perfil.html">Perfil</a>
+    </div>
+    <div class="flex gap-8">
+      <span id="user-nome" style="font-size:13px;color:var(--text-2)"></span>
+      <button class="btn btn-ghost btn-sm" onclick="sair()">Sair</button>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="content">
+
+      <!-- Welcome -->
+      <div class="welcome-bar flex-between">
+        <div>
+          <h1>Olá, <span id="nome-usuario" style="color:var(--orange)">—</span> 💪</h1>
+          <p id="msg-dia">Carregando...</p>
+        </div>
+        <a href="/treino.html" class="btn btn-primary btn-lg">
+          ▶ Iniciar treino
+        </a>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-strip">
+        <div class="stat-card">
+          <div class="label">Treinos esta semana</div>
+          <div class="value orange" id="stat-semana">—</div>
+          <div class="sub" id="stat-semana-sub">carregando</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Total de treinos</div>
+          <div class="value" id="stat-total">—</div>
+          <div class="sub">sessões concluídas</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Sequência atual</div>
+          <div class="value" id="stat-streak">—</div>
+          <div class="sub">dias consecutivos</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">PRs registrados</div>
+          <div class="value" id="stat-prs">—</div>
+          <div class="sub">recordes pessoais</div>
+        </div>
+      </div>
+
+      <!-- Grid principal -->
+      <div class="main-grid">
+
+        <!-- Esquerda: fichas + histórico -->
+        <div>
+          <div class="card" style="margin-bottom:24px">
+            <div class="flex-between" style="margin-bottom:16px">
+              <div class="section-title" style="margin:0">Suas fichas</div>
+              <a href="/fichas.html" class="btn btn-ghost btn-sm">Ver todas</a>
+            </div>
+            <div id="fichas-lista" style="display:flex;flex-direction:column;gap:8px">
+              <div style="color:var(--text-3);text-align:center;padding:24px">Carregando...</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="section-title">Últimos treinos</div>
+            <div id="sessoes-lista">
+              <div style="color:var(--text-3);text-align:center;padding:24px">Carregando...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Direita: ações rápidas -->
+        <div>
+          <div class="section-title">Ações rápidas</div>
+          <div class="quick-actions">
+            <a href="/treino.html" class="quick-action-btn">
+              <div class="quick-action-icon orange">🏋️</div>
+              <div class="quick-action-text">
+                <div class="title">Iniciar treino</div>
+                <div class="sub">Selecione uma ficha e treine</div>
+              </div>
+            </a>
+            <a href="/fichas.html" class="quick-action-btn">
+              <div class="quick-action-icon blue">📋</div>
+              <div class="quick-action-text">
+                <div class="title">Gerenciar fichas</div>
+                <div class="sub">Crie e edite seus treinos</div>
+              </div>
+            </a>
+            <a href="/historico.html" class="quick-action-btn">
+              <div class="quick-action-icon green">📈</div>
+              <div class="quick-action-text">
+                <div class="title">Ver evolução</div>
+                <div class="sub">Histórico e recordes pessoais</div>
+              </div>
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase, requireAuth, showToast } from './js/supabase.js';
+    import { StatisticsEngine } from './js/StatisticsEngine.js';
+    import { WorkoutService } from './js/WorkoutService.js';
+
+    const splashInicio = Date.now();
+    function esconderSplash() {
+      const tempoRestante = Math.max(0, 500 - (Date.now() - splashInicio));
+      setTimeout(() => {
+        const splash = document.getElementById('app-splash');
+        if (!splash) return;
+        splash.classList.add('hide');
+        setTimeout(() => splash.remove(), 450);
+      }, tempoRestante);
+    }
+    // Rede de segurança: nunca deixa a splash travada na tela, mesmo se
+    // algo der errado no carregamento dos dados abaixo.
+    setTimeout(esconderSplash, 6000);
+
+    const user = await requireAuth();
+    if (!user) { window.location.href = "/index.html"; throw new Error("unauth"); }
+
+    // Nome do usuário
+    const nome = user.user_metadata?.nome || user.email.split('@')[0];
+    document.getElementById('nome-usuario').textContent = nome;
+    document.getElementById('user-nome').textContent = nome;
+
+    // Mensagem do dia
+    const hora = new Date().getHours();
+    const msg = hora < 12 ? 'Bom dia! Pronto para treinar?' : hora < 18 ? 'Boa tarde! Hora de ir à academia.' : 'Boa noite! Consistência é tudo.';
+    document.getElementById('msg-dia').textContent = msg;
+
+    // Carregar dados em paralelo (via Services/Engines, não query solta)
+    const [resumo, streak, todasFichas, sessoes] = await Promise.all([
+      StatisticsEngine.resumoGeral(user.id),
+      StatisticsEngine.sequenciaAtual(user.id),
+      WorkoutService.listarFichas(user.id),
+      StatisticsEngine.listarSessoes(user.id, 5)
+    ]);
+    const fichas = todasFichas.slice(0, 5);
+
+    // Stats
+    document.getElementById('stat-total').textContent = resumo.totalSessoes;
+    document.getElementById('stat-prs').textContent = resumo.totalPRs;
+    document.getElementById('stat-semana').textContent = resumo.semanal;
+    document.getElementById('stat-semana-sub').textContent = resumo.semanal === 1 ? '1 treino' : `${resumo.semanal} treinos`;
+    document.getElementById('stat-streak').textContent = streak;
+
+    // Fichas
+    const fichasEl = document.getElementById('fichas-lista');
+    if (!fichas?.length) {
+      fichasEl.innerHTML = `
+        <div class="empty-state" style="padding:24px">
+          <p>Nenhuma ficha criada ainda.</p>
+          <a href="/fichas.html" class="btn btn-primary">Criar primeira ficha</a>
+        </div>`;
+    } else {
+      fichasEl.innerHTML = fichas.map(f => `
+        <a class="ficha-item" href="/treino.html?ficha=${f.id}">
+          <div class="ficha-item-info">
+            <div class="ficha-item-nome">${f.nome}</div>
+            ${f.descricao ? `<div class="ficha-item-sub">${f.descricao}</div>` : ''}
+          </div>
+          <div class="arrow">›</div>
+        </a>`).join('');
+    }
+
+    // Sessões recentes
+    const sessoesEl = document.getElementById('sessoes-lista');
+    if (!sessoes?.length) {
+      sessoesEl.innerHTML = `<div style="color:var(--text-3);text-align:center;padding:24px">Nenhum treino registrado ainda.</div>`;
+    } else {
+      sessoesEl.innerHTML = sessoes.map(s => {
+        const data = new Date(s.iniciado_em);
+        const dataStr = data.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
+        const dur = s.duracao_min ? `${s.duracao_min} min` : '—';
+        return `
+          <div class="sessao-item">
+            <div class="sessao-item-top">
+              <div class="sessao-item-nome">${s.ficha_nome || 'Treino livre'}</div>
+              <div class="sessao-item-data">${dataStr}</div>
+            </div>
+            <div class="sessao-item-meta">Duração: ${dur}</div>
+          </div>`;
+      }).join('');
+    }
+
+    esconderSplash();
+
+    window.sair = async () => {
+      await supabase.auth.signOut();
+      window.location.href = '/index.html';
+    };
+  </script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
+    }
+  </script>
+</body>
+</html>

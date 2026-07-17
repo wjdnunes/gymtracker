@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#f97316" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+  <title>GymTracker — Diagnóstico de Vídeos</title>
+  <link rel="stylesheet" href="css/global.css" />
+  <style>
+    .content { padding: 32px 0 64px; }
+
+    .resumo-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+    }
+    .stat-card .label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text-3); margin-bottom: 8px; }
+    .stat-card .value { font-family: 'Barlow Condensed', sans-serif; font-size: 2rem; font-weight: 700; line-height: 1; }
+    .stat-card .value.red { color: var(--red); }
+    .stat-card .value.green { color: var(--green); }
+
+    .linha-resultado {
+      display: grid;
+      grid-template-columns: 1fr 160px 120px;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .linha-resultado:last-child { border-bottom: none; }
+    .linha-resultado .nome { font-weight: 600; }
+    .linha-resultado .video-id { color: var(--text-3); font-family: monospace; }
+
+    .progresso-bar-wrap { background: var(--bg-3); border-radius: 999px; height: 8px; overflow: hidden; margin: 16px 0; }
+    .progresso-bar { background: var(--orange); height: 100%; width: 0%; transition: width .2s; }
+
+    .toggle-todos { font-size: 13px; color: var(--text-2); cursor: pointer; user-select: none; }
+
+    @media (max-width: 768px) {
+      .content { padding: 20px 0 48px; }
+      .resumo-strip { grid-template-columns: 1fr; }
+      .linha-resultado { grid-template-columns: 1fr; gap: 4px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar">
+    <a class="navbar-brand" href="/dashboard.html">Gym<span>Tracker</span></a>
+    <div class="navbar-nav">
+      <a href="/dashboard.html">Início</a>
+      <a href="/biblioteca.html">Biblioteca</a>
+      <a href="/fichas.html">Fichas</a>
+      <a href="/treino.html">Treinar</a>
+      <a href="/historico.html">Histórico</a>
+      <a href="/relatorio.html">Relatório</a>
+      <a href="/perfil.html">Perfil</a>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="sair()">Sair</button>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="content">
+
+      <div class="page-header">
+        <h1>Diagnóstico de Vídeos</h1>
+        <p>Verifica se o código de cada vídeo da Biblioteca ainda existe no YouTube</p>
+      </div>
+
+      <div id="bloco-sem-acesso" class="card" style="display:none">
+        <p style="color:var(--text-2)">Essa ferramenta é só para administradores.</p>
+      </div>
+
+      <div id="bloco-principal" style="display:none">
+
+        <div class="card" style="margin-bottom:24px">
+          <p style="color:var(--text-2);font-size:13px;margin-bottom:12px">
+            Isso vai checar, um por um, todos os exercícios que têm vídeo cadastrado.
+            Só detecta vídeos com <b>código inexistente/errado</b> — não detecta vídeos
+            que existem mas o dono bloqueou a reprodução em outros sites (esse tipo só
+            aparece testando na tela mesmo).
+          </p>
+          <button class="btn btn-primary" id="btn-rodar" onclick="rodarDiagnostico()">▶ Rodar diagnóstico</button>
+          <div class="progresso-bar-wrap" id="progresso-wrap" style="display:none">
+            <div class="progresso-bar" id="progresso-bar"></div>
+          </div>
+          <div id="progresso-texto" style="font-size:12px;color:var(--text-3);margin-top:6px"></div>
+        </div>
+
+        <div id="bloco-resultado" style="display:none">
+          <div class="resumo-strip">
+            <div class="stat-card">
+              <div class="label">Com vídeo cadastrado</div>
+              <div class="value" id="stat-total">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">OK</div>
+              <div class="value green" id="stat-ok">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Com código inválido</div>
+              <div class="value red" id="stat-invalidos">—</div>
+            </div>
+          </div>
+
+          <div class="flex-between" style="margin-bottom:8px">
+            <div class="card-title" style="margin:0">Resultado</div>
+            <label class="toggle-todos">
+              <input type="checkbox" id="chk-mostrar-todos" onchange="renderizarResultado()" />
+              mostrar todos (não só os quebrados)
+            </label>
+          </div>
+
+          <div class="card" style="padding:0" id="lista-resultado"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase, requireAuth, showToast } from './js/supabase.js';
+    import { ExerciseService } from './js/ExerciseService.js';
+    import { ProfileService } from './js/ProfileService.js';
+
+    const user = await requireAuth();
+    if (!user) { window.location.href = '/index.html'; throw new Error('unauth'); }
+
+    let resultados = [];
+
+    async function init() {
+      const perfil = await ProfileService.obterPerfil(user.id);
+      if (!perfil?.is_admin) {
+        document.getElementById('bloco-sem-acesso').style.display = 'block';
+        return;
+      }
+      document.getElementById('bloco-principal').style.display = 'block';
+    }
+
+    // Consulta o oEmbed público do YouTube — não precisa de chave de API.
+    // Se o vídeo não existir/for privado, essa chamada falha de verdade
+    // (404). Mas uma falha também pode ser só o YouTube limitando a
+    // quantidade de checagens rápidas (rate limit) — por isso tenta de
+    // novo antes de desistir, em vez de marcar como inválido na primeira.
+    function esperar(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    async function checarVideo(videoId, tentativas = 2) {
+      for (let i = 0; i < tentativas; i++) {
+        try {
+          const url = `https://www.youtube.com/oembed?url=${encodeURIComponent('https://www.youtube.com/watch?v=' + videoId)}&format=json`;
+          const resp = await fetch(url);
+          if (resp.ok) return true;
+          if (resp.status === 404) return false; // vídeo realmente não existe, não adianta tentar de novo
+        } catch (e) {
+          // falha de rede — pode ser passageira, tenta de novo
+        }
+        if (i < tentativas - 1) await esperar(800);
+      }
+      return false;
+    }
+
+    window.rodarDiagnostico = async () => {
+      const btn = document.getElementById('btn-rodar');
+      btn.disabled = true;
+      btn.textContent = 'Carregando exercícios...';
+
+      const todos = await ExerciseService.listar({ tipo: 'todos' });
+      const comVideo = [];
+      todos.forEach(ex => {
+        const media = ex.exercise_media?.find(m => m.provider === 'youtube');
+        if (media) comVideo.push({ id: ex.id, nome: ex.name_pt, videoId: media.video_id });
+      });
+
+      document.getElementById('progresso-wrap').style.display = 'block';
+      resultados = [];
+
+      // Checa em lotes pequenos, pra não estourar limite de requisições de uma vez
+      const TAMANHO_LOTE = 5;
+      for (let i = 0; i < comVideo.length; i += TAMANHO_LOTE) {
+        const lote = comVideo.slice(i, i + TAMANHO_LOTE);
+        const checagens = await Promise.all(lote.map(async item => ({
+          ...item,
+          ok: await checarVideo(item.videoId)
+        })));
+        resultados.push(...checagens);
+
+        const pct = Math.round((resultados.length / comVideo.length) * 100);
+        document.getElementById('progresso-bar').style.width = pct + '%';
+        document.getElementById('progresso-texto').textContent =
+          `Verificando... ${resultados.length}/${comVideo.length}`;
+
+        // Pausa entre lotes — evita disparar o limite de requisições do
+        // YouTube quando a biblioteca tem muitos vídeos (causava falso
+        // positivo de "inválido" em vídeos que na verdade funcionam)
+        await esperar(400);
+      }
+
+      btn.disabled = false;
+      btn.textContent = '▶ Rodar diagnóstico novamente';
+      document.getElementById('progresso-texto').textContent = 'Concluído.';
+
+      const invalidos = resultados.filter(r => !r.ok).length;
+      document.getElementById('stat-total').textContent = resultados.length;
+      document.getElementById('stat-ok').textContent = resultados.length - invalidos;
+      document.getElementById('stat-invalidos').textContent = invalidos;
+
+      document.getElementById('bloco-resultado').style.display = 'block';
+      renderizarResultado();
+    };
+
+    window.renderizarResultado = () => {
+      const mostrarTodos = document.getElementById('chk-mostrar-todos').checked;
+      const lista = mostrarTodos ? resultados : resultados.filter(r => !r.ok);
+
+      const container = document.getElementById('lista-resultado');
+      if (lista.length === 0) {
+        container.innerHTML = `<div style="padding:32px;text-align:center;color:var(--text-3)">
+          ${mostrarTodos ? 'Nenhum vídeo cadastrado.' : 'Nenhum vídeo quebrado encontrado! 🎉'}
+        </div>`;
+        return;
+      }
+
+      container.innerHTML = lista.map(r => `
+        <div class="linha-resultado">
+          <div class="nome">${r.nome}</div>
+          <div class="video-id">${r.videoId}</div>
+          <div>${r.ok ? '<span class="badge badge-green">OK</span>' : '<span class="badge badge-red">Inválido</span>'}</div>
+        </div>
+      `).join('');
+    };
+
+    window.sair = async () => { await supabase.auth.signOut(); window.location.href = '/index.html'; };
+
+    init();
+  </script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
+    }
+  </script>
+</body>
+</html>

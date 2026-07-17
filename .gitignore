@@ -1,0 +1,27 @@
+# Credenciais — NUNCA versionar o supabase.js real com chaves reais.
+# Use js/supabase.config.example.js como template e mantenha o
+# arquivo de verdade fora do controle de versão.
+js/supabase.js
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs e temporários
+*.log
+npm-debug.log*
+.tmp/
+.cache/
+
+# Node (caso algum dia entre alguma ferramenta de build/lint)
+node_modules/
+
+# Ambiente local
+.env
+.env.local

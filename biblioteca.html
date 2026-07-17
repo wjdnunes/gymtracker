@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#f97316" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+  <title>GymTracker — Biblioteca</title>
+  <link rel="stylesheet" href="css/global.css" />
+  <style>
+    .content { padding: 32px 0 64px; }
+
+    /* Filtros */
+    .filtros {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .filtros input {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .filtros select {
+      width: auto;
+      min-width: 160px;
+    }
+
+    /* ── Layout Nível 1 / Nível 2 ─────────────────────────── */
+    .biblioteca-layout {
+      display: grid;
+      grid-template-columns: 400px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .lista-col {
+      max-height: calc(100vh - 260px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-right: 4px;
+    }
+
+    .item-lista {
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: all .15s;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      position: relative;
+    }
+    .item-lista:hover { border-color: var(--border-2); }
+    .item-lista.selecionado { border-color: var(--orange); background: var(--orange-glow); }
+
+    .item-lista .thumb {
+      width: 40px; height: 40px; border-radius: 8px;
+      background: var(--bg-3); display: flex; align-items: center;
+      justify-content: center; font-size: 18px; flex-shrink: 0;
+    }
+    .item-lista .info { flex: 1; min-width: 0; }
+    .item-lista .nome { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item-lista .grupo { font-size: 11px; color: var(--orange); margin-top: 2px; }
+    .item-lista .badge-oficial-mini {
+      font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+      background: rgba(59,130,246,0.15); color: var(--blue); padding: 1px 6px; border-radius: 999px;
+      flex-shrink: 0;
+    }
+
+    .detalhe-col {
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      min-height: 400px;
+      position: sticky;
+      top: 20px;
+    }
+
+    .detalhe-vazio {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 400px; color: var(--text-3); text-align: center; gap: 8px;
+    }
+    .detalhe-vazio .icon { font-size: 40px; }
+
+    .detalhe-tabs {
+      display: flex; gap: 2px; background: var(--bg-3); border-radius: var(--radius);
+      padding: 4px; margin: 16px 0 20px; overflow-x: auto;
+    }
+    .detalhe-tab {
+      flex: 1; padding: 8px 10px; border: none; background: transparent;
+      color: var(--text-3); font-family: 'Inter', sans-serif; font-size: 12px;
+      font-weight: 600; cursor: pointer; border-radius: 7px; transition: all .15s;
+      white-space: nowrap;
+    }
+    .detalhe-tab.active { background: var(--bg-4); color: var(--orange); }
+    .detalhe-tab-panel { display: none; flex-direction: column; gap: 14px; }
+    .detalhe-tab-panel.active { display: flex; }
+
+    .mobile-voltar { display: none; }
+
+    @media (max-width: 968px) {
+      .biblioteca-layout { grid-template-columns: 1fr; }
+      .lista-col { max-height: none; overflow-y: visible; }
+      .detalhe-col {
+        position: fixed; inset: 0; z-index: 200; border-radius: 0;
+        overflow-y: auto; display: none; padding: 16px; padding-bottom: 90px;
+      }
+      .detalhe-col.aberto { display: block; }
+      .mobile-voltar {
+        display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+        background: none; border: none; color: var(--text-2); font-size: 13px;
+        cursor: pointer; padding: 8px 0;
+      }
+    }
+
+
+    .icon-btn {
+      background: none; border: none; color: var(--text-3);
+      cursor: pointer; padding: 4px 6px; border-radius: 6px;
+      font-size: 13px; transition: all .15s;
+    }
+    .icon-btn:hover { background: var(--bg-4); color: var(--text); }
+    .icon-btn.red:hover { color: var(--red); }
+
+    /* Badge oficial */
+    .badge-oficial {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      background: rgba(59,130,246,0.15);
+      color: var(--blue);
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+
+    /* Modal detalhe */
+    .detalhe-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .detalhe-section {
+      background: var(--bg-3);
+      border-radius: var(--radius);
+      padding: 14px;
+    }
+
+    .detalhe-section .label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-3);
+      margin-bottom: 6px;
+    }
+
+    .detalhe-section .valor {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* Form abas */
+    .modal-tabs { display: flex; gap: 2px; background: var(--bg-3); border-radius: var(--radius); padding: 4px; margin-bottom: 20px; }
+    .modal-tab { flex: 1; padding: 7px 4px; border: none; background: transparent; color: var(--text-3); font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 7px; transition: all .15s; }
+    .modal-tab.active { background: var(--bg-4); color: var(--orange); }
+    .tab-panel { display: none; flex-direction: column; gap: 14px; }
+    .tab-panel.active { display: flex; }
+    .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    @media (max-width: 768px) {
+      .content { padding: 20px 0 48px; }
+      .form-row-2 { grid-template-columns: 1fr; }
+      .page-header.flex-between { flex-direction: column; align-items: flex-start; gap: 16px; }
+    }
+
+    .check-group { display: flex; flex-wrap: wrap; gap: 8px; }
+    .check-item { display: flex; align-items: center; gap: 6px; background: var(--bg-3); border: 1px solid var(--border-2); border-radius: 8px; padding: 7px 12px; cursor: pointer; font-size: 13px; transition: all .15s; user-select: none; }
+    .check-item input { margin: 0; }
+    .check-item.checked { background: var(--orange-glow); border-color: var(--orange-dim); color: var(--orange); }
+
+    .radio-group { display: flex; flex-wrap: wrap; gap: 8px; }
+    .radio-item { display: flex; align-items: center; gap: 6px; background: var(--bg-3); border: 1px solid var(--border-2); border-radius: 8px; padding: 7px 12px; cursor: pointer; font-size: 13px; transition: all .15s; user-select: none; }
+    .radio-item.checked { background: var(--orange-glow); border-color: var(--orange-dim); color: var(--orange); }
+
+    .section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text-3); margin-bottom: 6px; }
+
+    /* Video embed */
+    .video-wrapper { position: relative; padding-bottom: 56.25%; height: 0; border-radius: var(--radius); overflow: hidden; margin-top: 12px; }
+    .video-wrapper iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+    /* Equivalentes */
+    .equivalente-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: var(--bg-3);
+      border-radius: var(--radius);
+      font-size: 13px;
+    }
+
+    .counter {
+      font-size: 13px;
+      color: var(--text-2);
+    }
+    .add-rel-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px; background: var(--bg-3); border: 1px solid var(--border);
+      border-radius: var(--radius); cursor: pointer; font-size: 13px;
+    }
+    .add-rel-item:hover { background: var(--bg-4); }
+    .add-rel-item .plus { color: var(--orange); font-weight: 700; font-size: 18px; }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar">
+    <a class="navbar-brand" href="/dashboard.html">Gym<span>Tracker</span></a>
+    <div class="navbar-nav">
+      <a href="/dashboard.html">Início</a>
+      <a href="/biblioteca.html" class="active">Biblioteca</a>
+      <a href="/fichas.html">Fichas</a>
+      <a href="/treino.html">Treinar</a>
+      <a href="/historico.html">Histórico</a>
+      <a href="/relatorio.html">Relatório</a>
+      <a href="/perfil.html">Perfil</a>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="sair()">Sair</button>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="content">
+
+      <div class="page-header flex-between">
+        <div>
+          <h1>Biblioteca de Exercícios</h1>
+          <p>Base de conhecimento — técnica, músculos e equipamentos</p>
+        </div>
+        <div class="flex gap-8">
+          <a href="/diagnostico-videos.html" class="btn btn-ghost" id="btn-diagnostico" style="display:none">🩺 Diagnóstico de vídeos</a>
+          <button class="btn btn-primary" onclick="abrirModalNovo()">+ Novo exercício</button>
+        </div>
+      </div>
+
+      <!-- Filtros -->
+      <div class="filtros">
+        <input type="text" id="busca" placeholder="🔍 Buscar exercício..." oninput="filtrar()" />
+        <select id="filtro-grupo" onchange="filtrar()">
+          <option value="">Todos os músculos</option>
+        </select>
+        <select id="filtro-nivel" onchange="filtrar()">
+          <option value="">Todos os níveis</option>
+          <option value="iniciante">Iniciante</option>
+          <option value="intermediario">Intermediário</option>
+          <option value="avancado">Avançado</option>
+        </select>
+        <select id="filtro-tipo" onchange="filtrar()">
+          <option value="todos">Todos</option>
+          <option value="meus">Meus exercícios</option>
+        </select>
+      </div>
+
+      <div class="counter" id="counter" style="margin-bottom:16px"></div>
+
+      <div class="biblioteca-layout">
+        <div class="lista-col" id="lista-col">
+          <div style="color:var(--text-3);text-align:center;padding:48px">Carregando...</div>
+        </div>
+
+        <div class="detalhe-col" id="detalhe-col">
+          <div class="detalhe-vazio">
+            <div class="icon">🏋️</div>
+            <p>Selecione um exercício na lista<br>pra ver os detalhes.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal: Adicionar relação (variação/substituição/progressão) -->
+  <div class="modal-overlay" id="modal-add-relacao">
+    <div class="modal" style="max-width:480px">
+      <div class="modal-header">
+        <h2>Adicionar relação</h2>
+        <button class="modal-close" onclick="fecharModalAddRelacao()">✕</button>
+      </div>
+
+      <div class="form-group" style="margin-bottom:12px">
+        <label>Tipo de relação</label>
+        <select id="rel-tipo" onchange="document.getElementById('rel-motivo-wrap').style.display = this.value==='substituicao' ? 'block' : 'none'">
+          <option value="variacao">Variação (mesmo nível, jeito diferente)</option>
+          <option value="substituicao">Substituição (trocar por um motivo)</option>
+          <option value="progressao">Progressão (mais fácil → mais difícil)</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="rel-motivo-wrap" style="display:none;margin-bottom:12px">
+        <label>Motivo da substituição</label>
+        <select id="rel-motivo">
+          <option value="equipment">Falta de equipamento</option>
+          <option value="injury">Lesão/limitação</option>
+          <option value="beginner">Versão pra iniciante</option>
+          <option value="advanced">Versão avançada</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label id="rel-busca-label">Buscar exercício relacionado</label>
+        <input type="text" id="rel-busca" placeholder="Digite o nome..." oninput="buscarExercicioRelacao()" />
+      </div>
+      <div id="rel-resultados" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;margin-top:10px"></div>
+    </div>
+  </div>
+
+  <!-- Modal: Novo/Editar exercício -->
+  <div class="modal-overlay" id="modal-form">
+    <div class="modal" style="max-width:700px">
+      <div class="modal-header">
+        <h3 id="form-titulo">Novo exercício</h3>
+        <button class="modal-close" onclick="fecharForm()">✕</button>
+      </div>
+
+      <div class="modal-tabs">
+        <button class="modal-tab active" data-tab="basico" onclick="switchTab('basico')">📋 Básico</button>
+        <button class="modal-tab" data-tab="tecnica" onclick="switchTab('tecnica')">🎯 Técnica</button>
+        <button class="modal-tab" data-tab="detalhes" onclick="switchTab('detalhes')">⚙️ Detalhes</button>
+      </div>
+
+      <input type="hidden" id="form-id" />
+
+      <!-- ABA: Básico -->
+      <div class="tab-panel active" id="tab-basico">
+        <div class="form-group">
+          <label>Nome do exercício (PT) *</label>
+          <input type="text" id="f-nome" placeholder="Ex: Supino Reto com Barra" />
+        </div>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Músculo Principal *</label>
+            <select id="f-grupo-principal"></select>
+          </div>
+          <div class="form-group">
+            <label>Dificuldade</label>
+            <select id="f-dificuldade"></select>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="section-label">Músculos Secundários</div>
+          <div class="check-group" id="f-check-grupos-sec"></div>
+        </div>
+        <div class="form-group">
+          <div class="section-label">Músculos Estabilizadores</div>
+          <div class="check-group" id="f-check-grupos-estab"></div>
+        </div>
+        <div class="form-group">
+          <div class="section-label">Equipamento</div>
+          <div class="check-group" id="f-check-equipamentos"></div>
+        </div>
+        <div class="form-group">
+          <label>Vídeo do YouTube (ID ou Link)</label>
+          <input type="text" id="f-video" placeholder="Ex: rT7DgCr-3pg ou link completo" />
+          <button type="button" class="btn btn-ghost btn-sm" style="align-self:flex-start;margin-top:4px" onclick="testarVideo()">▶ Testar vídeo</button>
+          <div id="preview-video-wrap" style="display:none;margin-top:10px">
+            <div id="preview-video-player" style="aspect-ratio:16/9;background:#000;border-radius:var(--radius)"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ABA: Técnica -->
+      <div class="tab-panel" id="tab-tecnica">
+        <div class="form-group">
+          <label>Descrição e Instruções</label>
+          <textarea id="f-descricao" rows="4" placeholder="Descrição geral e guia de execução..."></textarea>
+        </div>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>É composto?</label>
+            <select id="f-composto">
+              <option value="false">Não (Isolado)</option>
+              <option value="true">Sim (Composto)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>É unilateral?</label>
+            <select id="f-unilateral">
+              <option value="false">Não</option>
+              <option value="true">Sim</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- ABA: Detalhes -->
+      <div class="tab-panel" id="tab-detalhes">
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Nome do exercício (EN)</label>
+            <input type="text" id="f-nome-en" placeholder="Ex: Barbell Bench Press" />
+          </div>
+          <div class="form-group">
+            <label>Padrão de Movimento</label>
+            <select id="f-padrao-movimento">
+              <option value="">Selecione...</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Tipo de Exercício</label>
+          <select id="f-tipo-exercicio">
+            <option value="">Selecione...</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+        <button class="btn btn-ghost" onclick="fecharForm()">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvar()">Salvar exercício</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase, requireAuth, showToast } from './js/supabase.js';
+    import { ExerciseService } from './js/ExerciseService.js';
+    import { MuscleDiagramService } from './js/MuscleDiagramService.js';
+    import { ProfileService } from './js/ProfileService.js';
+
+    const user = await requireAuth();
+    if (!user) { window.location.href = '/index.html'; throw new Error('unauth'); }
+
+    // Admin pode editar exercícios oficiais também (não só os próprios)
+    let isAdmin = false;
+    try {
+      const perfil = await ProfileService.obterPerfil(user.id);
+      isAdmin = !!perfil?.is_admin;
+    } catch (e) {
+      isAdmin = false;
+    }
+    if (isAdmin) {
+      document.getElementById('btn-diagnostico').style.display = 'inline-flex';
+    }
+
+    let todosExercicios = [];
+    let listMusculos = [];
+    let listEquipamentos = [];
+    let listDificuldades = [];
+    let listPadroes = [];
+    let listTipos = [];
+
+    // Carregar dados de domínio e popular campos
+    async function inicializarDadosDominio() {
+      try {
+        listMusculos = await ExerciseService.obterMusculos();
+        listEquipamentos = await ExerciseService.obterEquipamentos();
+        listDificuldades = await ExerciseService.obterDificuldades();
+
+        // Buscar padrões e tipos de exercício
+        const { data: padroes } = await supabase.from('movement_patterns').select('*').order('name');
+        listPadroes = padroes || [];
+        const { data: tipos } = await supabase.from('exercise_types').select('*').order('name');
+        listTipos = tipos || [];
+
+        // Preencher filtros
+        const filtroGrupo = document.getElementById('filtro-grupo');
+        filtroGrupo.innerHTML = '<option value="">Todos os músculos</option>';
+        listMusculos.forEach(m => {
+          filtroGrupo.innerHTML += `<option value="${m.id}">${m.name_pt}</option>`;
+        });
+
+        // Preencher select de grupo muscular principal no form
+        const selGrupoPrincipal = document.getElementById('f-grupo-principal');
+        selGrupoPrincipal.innerHTML = '<option value="">Selecione...</option>';
+        listMusculos.forEach(m => {
+          selGrupoPrincipal.innerHTML += `<option value="${m.id}">${m.name_pt}</option>`;
+        });
+
+        // Preencher dificuldades
+        const selDificuldade = document.getElementById('f-dificuldade');
+        selDificuldade.innerHTML = '<option value="">Selecione...</option>';
+        listDificuldades.forEach(d => {
+          selDificuldade.innerHTML += `<option value="${d.id}">${d.name}</option>`;
+        });
+
+        // Preencher padrões de movimento
+        const selPadrao = document.getElementById('f-padrao-movimento');
+        selPadrao.innerHTML = '<option value="">Selecione...</option>';
+        listPadroes.forEach(p => {
+          selPadrao.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+        });
+
+        // Preencher tipos de exercício
+        const selTipo = document.getElementById('f-tipo-exercicio');
+        selTipo.innerHTML = '<option value="">Selecione...</option>';
+        listTipos.forEach(t => {
+          selTipo.innerHTML += `<option value="${t.id}">${t.name}</option>`;
+        });
+
+        // Preencher checks de músculos secundários e estabilizadores
+        const containerSec = document.getElementById('f-check-grupos-sec');
+        const containerEstab = document.getElementById('f-check-grupos-estab');
+        containerSec.innerHTML = '';
+        containerEstab.innerHTML = '';
+
+        listMusculos.forEach(m => {
+          criarCheck('f-check-grupos-sec', m.id, m.name_pt);
+          criarCheck('f-check-grupos-estab', m.id, m.name_pt);
+        });
+
+        // Preencher equipamentos
+        const containerEquip = document.getElementById('f-check-equipamentos');
+        containerEquip.innerHTML = '';
+        listEquipamentos.forEach(e => {
+          criarCheck('f-check-equipamentos', e.id, e.name);
+        });
+
+      } catch (err) {
+        showToast('Erro ao carregar dados iniciais: ' + err.message, 'erro');
+      }
+    }
+
+    // Helper de UI para Checkboxes
+    function criarCheck(containerId, value, label) {
+      const d = document.createElement('label');
+      d.className = 'check-item';
+      d.innerHTML = `<input type="checkbox" value="${value}" /> ${label}`;
+      d.querySelector('input').addEventListener('change', () => d.classList.toggle('checked', d.querySelector('input').checked));
+      document.getElementById(containerId).appendChild(d);
+    }
+
+    // ── Abas ──────────────────────────────────────────────
+    window.switchTab = (tab) => {
+      document.querySelectorAll('.modal-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.getElementById(`tab-${tab}`).classList.add('active');
+    };
+
+    // ── Carregar e filtrar ─────────────────────────────────
+    async function carregar() {
+      todosExercicios = await ExerciseService.listar();
+      renderGrid(todosExercicios);
+    }
+
+    window.filtrar = () => {
+      const busca = document.getElementById('busca').value.toLowerCase();
+      const grupoId = document.getElementById('filtro-grupo').value;
+      const nivel = document.getElementById('filtro-nivel').value;
+      const tipo = document.getElementById('filtro-tipo').value;
+
+      let result = todosExercicios.filter(e => {
+        if (busca && !e.name_pt.toLowerCase().includes(busca)) return false;
+        if (grupoId && !e.exercise_muscles?.some(em => em.muscle_id === grupoId)) return false;
+        if (tipo === 'meus' && e.criado_por !== user.id) return false;
+        return true;
+      });
+
+      renderGrid(result);
+    };
+
+    function renderGrid(exercicios) {
+      const lista = document.getElementById('lista-col');
+      document.getElementById('counter').textContent = `${exercicios.length} exercício${exercicios.length !== 1 ? 's' : ''}`;
+
+      if (!exercicios.length) {
+        lista.innerHTML = `<div class="empty-state"><div class="icon">🏋️</div><p>Nenhum exercício encontrado.</p><button class="btn btn-primary" onclick="abrirModalNovo()">Adicionar primeiro</button></div>`;
+        return;
+      }
+
+      lista.innerHTML = exercicios.map(ex => {
+        const primary = ex.exercise_muscles?.find(em => em.role === 'primary');
+        const primaryName = primary ? primary.muscles?.name_pt : '';
+        const isOficial = !ex.criado_por;
+        const selecionado = ex.id === exercicioDetalheAtual;
+
+        return `
+          <div class="item-lista ${selecionado ? 'selecionado' : ''}" onclick="verDetalhe('${ex.id}')" data-id="${ex.id}">
+            <div class="thumb">🏋️</div>
+            <div class="info">
+              <div class="nome">${ex.name_pt}</div>
+              ${primaryName ? `<div class="grupo">${primaryName}</div>` : ''}
+            </div>
+            ${isOficial ? '<span class="badge-oficial-mini">Oficial</span>' : ''}
+          </div>`;
+      }).join('');
+    }
+
+    // ── Detalhe ────────────────────────────────────────────
+    let exercicioDetalheAtual = null;
+    window.verDetalhe = async (id) => {
+      exercicioDetalheAtual = id;
+      document.querySelectorAll('.item-lista').forEach(el => {
+        el.classList.toggle('selecionado', el.dataset.id === id);
+      });
+
+      const ex = await ExerciseService.buscarPorId(id);
+      const relacoes = await ExerciseService.listarRelacoes(id);
+      const temRelacoesCuradas = relacoes.variacoes.length || relacoes.substituicoes.length || relacoes.progressoesFaceis.length || relacoes.progressoesDificeis.length;
+      const equiv = temRelacoesCuradas ? [] : await ExerciseService.buscarEquivalentes(id);
+
+      const musclesNames = ex.exercise_muscles?.map(em => {
+        let roleName = 'Primário';
+        if (em.role === 'secondary') roleName = 'Secundário';
+        if (em.role === 'stabilizer') roleName = 'Estabilizador';
+        return `${em.muscles?.name_pt} (${roleName})`;
+      }) || [];
+
+      const isMeu = ex.criado_por === user.id;
+      const isOficial = !ex.criado_por;
+
+      let videoHtml = '';
+      const defaultMedia = ex.exercise_media?.find(m => m.is_default && m.provider === 'youtube');
+      if (defaultMedia) {
+        const embedUrl = `https://www.youtube.com/embed/${defaultMedia.video_id}`;
+        videoHtml = `<div class="video-wrapper"><iframe src="${embedUrl}" frameborder="0" allowfullscreen></iframe></div>`;
+      }
+
+      const equipNames = ex.exercise_equipment?.map(eq => `${eq.equipment?.name}${eq.required ? '' : ' (Opcional)'}`) || [];
+      const tagsList = ex.exercise_tags?.map(t => t.tags?.name) || [];
+
+      const cardResumo = (titulo, lista) => `
+        <div class="detalhe-section">
+          <div class="label">${titulo} (${lista.length})</div>
+          ${lista.length ? `
+            <div class="valor" style="display:flex;flex-direction:column;gap:4px;margin-top:4px">
+              ${lista.slice(0,2).map(e => `<div>${e.nome}</div>`).join('')}
+            </div>
+            <button class="btn btn-ghost btn-sm" style="margin-top:8px;padding:4px 10px;font-size:11px" onclick="switchDetalheTab('variacoes')">Ver todas</button>
+          ` : `<div class="valor" style="color:var(--text-3)">Nenhuma cadastrada</div>`}
+        </div>`;
+
+      const secaoRelacao = (titulo, lista, mostrarMotivo = false) => {
+        if (!lista.length) return '';
+        const motivos = { equipment: 'equipamento', injury: 'lesão', beginner: 'iniciante', advanced: 'avançado' };
+        return `
+          <div style="margin-top:16px">
+            <div class="section-label" style="margin-bottom:8px">${titulo}</div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              ${lista.map(e => `
+                <div class="equivalente-item">
+                  <span>${e.nome}</span>
+                  <span style="display:flex;align-items:center;gap:8px">
+                    ${mostrarMotivo && e.reason ? `<span style="font-size:11px;color:var(--text-3)">${motivos[e.reason]||''}</span>` : ''}
+                    ${(isMeu || isAdmin) ? `<button class="icon-btn red" style="width:24px;height:24px;font-size:12px" onclick="removerRelacao('${e.relId}')">✕</button>` : ''}
+                  </span>
+                </div>`).join('')}
+            </div>
+          </div>`;
+      };
+
+      const blocoRelacoesCuradas =
+        secaoRelacao('🔁 Variações', relacoes.variacoes) +
+        secaoRelacao('🔄 Substituições', relacoes.substituicoes, true) +
+        secaoRelacao('⬆️ Progressão (mais difícil)', relacoes.progressoesDificeis) +
+        secaoRelacao('⬇️ Progressão (mais fácil)', relacoes.progressoesFaceis);
+
+      const blocoEquivHeuristico = equiv.length ? `
+        <div style="margin-top:16px">
+          <div class="section-label" style="margin-bottom:8px">Outros exercícios pro mesmo músculo</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            ${equiv.map(e => `
+              <div class="equivalente-item">
+                <span>${e.nome || e.name_pt}</span>
+                <span style="font-size:12px;color:var(--text-3)">${e.grupo_muscular || ''}</span>
+              </div>`).join('')}
+          </div>
+        </div>` : '';
+
+      const blocoAddRelacao = (isMeu || isAdmin) ? `
+        <button class="btn btn-ghost btn-sm" style="margin-top:16px" onclick="abrirModalAddRelacao()">+ Adicionar variação/substituição/progressão</button>` : '';
+
+      document.getElementById('detalhe-col').innerHTML = `
+        <button class="mobile-voltar" onclick="voltarLista()">← Voltar pra lista</button>
+
+        <div class="flex-between" style="align-items:flex-start">
+          <div>
+            <h2 style="font-size:1.4rem">${ex.name_pt}</h2>
+            <div style="font-size:13px;color:var(--orange);margin-top:2px">${musclesNames.join(' · ')} ${isOficial ? '<span class="badge-oficial-mini" style="margin-left:6px">Oficial</span>' : ''}</div>
+          </div>
+          <div class="flex gap-8">
+            ${(isMeu || isAdmin) ? `<button class="btn btn-ghost btn-sm" onclick="editarExercicio('${id}')">✏️ Editar</button>` : ''}
+            ${(isMeu || isAdmin) ? `<button class="icon-btn red" onclick="excluir('${id}')">🗑</button>` : ''}
+          </div>
+        </div>
+
+        <div class="detalhe-tabs">
+          <button class="detalhe-tab active" data-dtab="geral" onclick="switchDetalheTab('geral')">Visão geral</button>
+          <button class="detalhe-tab" data-dtab="execucao" onclick="switchDetalheTab('execucao')">Execução</button>
+          <button class="detalhe-tab" data-dtab="musculos" onclick="switchDetalheTab('musculos')">Músculos</button>
+          <button class="detalhe-tab" data-dtab="erros" onclick="switchDetalheTab('erros')">Erros comuns</button>
+          <button class="detalhe-tab" data-dtab="variacoes" onclick="switchDetalheTab('variacoes')">Variações</button>
+        </div>
+
+        <div class="detalhe-tab-panel active" data-dpanel="geral">
+          ${videoHtml}
+          <div class="detalhe-grid" style="margin-top:16px">
+            <div class="detalhe-section"><div class="label">⭐ Dificuldade</div><div class="valor">${ex.difficulty?.name || 'Não informada'}</div></div>
+            <div class="detalhe-section"><div class="label">🧩 Tipo e Estrutura</div><div class="valor">${ex.is_compound ? 'Composto' : 'Isolado'} ${ex.is_unilateral ? '· Unilateral' : ''}</div></div>
+            ${equipNames.length ? `<div class="detalhe-section"><div class="label">🏋️ Equipamentos</div><div class="valor">${equipNames.join(', ')}</div></div>` : ''}
+            ${tagsList.length ? `<div class="detalhe-section"><div class="label">🏷️ Tags</div><div class="valor">${tagsList.join(', ')}</div></div>` : ''}
+          </div>
+          <div class="detalhe-grid" style="margin-top:16px">
+            ${cardResumo('⬆️ Progressões', relacoes.progressoesDificeis)}
+            ${cardResumo('⬇️ Regressões', relacoes.progressoesFaceis)}
+            ${cardResumo('🔄 Substituições', relacoes.substituicoes)}
+          </div>
+        </div>
+
+        <div class="detalhe-tab-panel" data-dpanel="execucao">
+          <div class="detalhe-section">
+            <div class="label">📝 Execução e Detalhes</div>
+            <div class="valor">${ex.description || 'Ainda não cadastrado.'}</div>
+          </div>
+        </div>
+
+        <div class="detalhe-tab-panel" data-dpanel="musculos">
+          <div id="diagrama-muscular-wrap" style="max-width:280px;margin:0 auto 16px"></div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            ${(ex.exercise_muscles||[]).map(em => `
+              <div class="equivalente-item">
+                <span>${em.muscles?.name_pt}</span>
+                <span style="font-size:12px;color:var(--text-3)">${em.role === 'primary' ? 'Primário' : em.role === 'secondary' ? 'Secundário' : 'Estabilizador'}</span>
+              </div>`).join('')}
+          </div>
+        </div>
+
+        <div class="detalhe-tab-panel" data-dpanel="erros">
+          <div style="color:var(--text-3);text-align:center;padding:32px 16px">
+            Ainda não cadastrado pra esse exercício.
+          </div>
+        </div>
+
+        <div class="detalhe-tab-panel" data-dpanel="variacoes">
+          ${blocoRelacoesCuradas || '<div style="color:var(--text-3);text-align:center;padding:16px">Nenhuma relação cadastrada ainda.</div>'}
+          ${blocoEquivHeuristico}
+          ${blocoAddRelacao}
+        </div>
+      `;
+
+      const diagramaWrap = document.getElementById('diagrama-muscular-wrap');
+      MuscleDiagramService.renderizar(diagramaWrap, ex.exercise_muscles).catch(() => {
+        diagramaWrap.innerHTML = '';
+      });
+
+      // Mobile: abre o painel em tela cheia
+      document.getElementById('detalhe-col').classList.add('aberto');
+    };
+
+    window.switchDetalheTab = (tab) => {
+      document.querySelectorAll('.detalhe-tab').forEach(t => t.classList.toggle('active', t.dataset.dtab === tab));
+      document.querySelectorAll('.detalhe-tab-panel').forEach(p => p.classList.toggle('active', p.dataset.dpanel === tab));
+    };
+
+    window.voltarLista = () => {
+      document.getElementById('detalhe-col').classList.remove('aberto');
+    };
+
+    // ── Gerenciar relações (variação/substituição/progressão) ──
+    window.abrirModalAddRelacao = () => {
+      document.getElementById('rel-tipo').value = 'variacao';
+      document.getElementById('rel-motivo-wrap').style.display = 'none';
+      document.getElementById('rel-busca').value = '';
+      document.getElementById('rel-resultados').innerHTML = '';
+      document.getElementById('modal-add-relacao').classList.add('open');
+      document.getElementById('rel-busca').focus();
+    };
+    window.fecharModalAddRelacao = () => document.getElementById('modal-add-relacao').classList.remove('open');
+
+    let buscaRelTimeout = null;
+    window.buscarExercicioRelacao = () => {
+      clearTimeout(buscaRelTimeout);
+      buscaRelTimeout = setTimeout(async () => {
+        const termo = document.getElementById('rel-busca').value.trim();
+        const resultadosEl = document.getElementById('rel-resultados');
+        if (termo.length < 2) { resultadosEl.innerHTML = ''; return; }
+
+        const encontrados = await ExerciseService.listar({ busca: termo });
+        const semOMesmo = encontrados.filter(e => e.id !== exercicioDetalheAtual);
+        resultadosEl.innerHTML = semOMesmo.slice(0, 15).map(e => `
+          <div class="add-rel-item" onclick="adicionarRelacaoSelecionada('${e.id}', '${e.name_pt.replace(/'/g,"\\'")}')">
+            <span>${e.name_pt}</span><span class="plus">+</span>
+          </div>`).join('') || `<div style="color:var(--text-3);text-align:center;padding:16px;font-size:13px">Nada encontrado.</div>`;
+      }, 300);
+    };
+
+    window.adicionarRelacaoSelecionada = async (relatedId, relatedNome) => {
+      const relationType = document.getElementById('rel-tipo').value;
+      const reason = relationType === 'substituicao' ? document.getElementById('rel-motivo').value : null;
+      try {
+        await ExerciseService.adicionarRelacao({
+          exerciseId: exercicioDetalheAtual, relatedExerciseId: relatedId,
+          relationType, reason
+        });
+        showToast(`${relatedNome} adicionado!`, 'sucesso');
+        fecharModalAddRelacao();
+        await verDetalhe(exercicioDetalheAtual);
+        switchDetalheTab('variacoes');
+      } catch (err) {
+        showToast('Erro ao adicionar: ' + err.message, 'erro');
+      }
+    };
+
+    window.removerRelacao = async (relId) => {
+      if (!confirm('Remover esta relação?')) return;
+      try {
+        await ExerciseService.removerRelacao(relId);
+        await verDetalhe(exercicioDetalheAtual);
+        switchDetalheTab('variacoes');
+      } catch (err) {
+        showToast('Erro ao remover: ' + err.message, 'erro');
+      }
+    };
+
+    // ── Form ───────────────────────────────────────────────
+    function limparForm() {
+      document.getElementById('form-id').value = '';
+      ['f-nome','f-nome-en','f-descricao','f-video'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('preview-video-wrap').style.display = 'none';
+      document.getElementById('preview-video-player').innerHTML = '';
+      document.getElementById('f-grupo-principal').value = '';
+      document.getElementById('f-dificuldade').value = '';
+      document.getElementById('f-padrao-movimento').value = '';
+      document.getElementById('f-tipo-exercicio').value = '';
+      document.getElementById('f-composto').value = 'false';
+      document.getElementById('f-unilateral').value = 'false';
+      
+      document.querySelectorAll('#f-check-grupos-sec input, #f-check-grupos-estab input, #f-check-equipamentos input').forEach(c => { 
+        c.checked = false; 
+        c.closest('.check-item').classList.remove('checked'); 
+      });
+      
+      switchTab('basico');
+    }
+
+    window.abrirModalNovo = () => {
+      limparForm();
+      document.getElementById('form-titulo').textContent = 'Novo exercício';
+      document.getElementById('modal-form').classList.add('open');
+    };
+
+    window.fecharForm = () => document.getElementById('modal-form').classList.remove('open');
+
+    function extrairVideoId(input) {
+      let videoId = input;
+      const match = input.match(/(?:youtu\.be\/|youtube\.com\/watch\?v=|youtube\.com\/embed\/)([^&?\s]+)/);
+      if (match) videoId = match[1];
+      return videoId;
+    }
+
+    window.testarVideo = () => {
+      const raw = document.getElementById('f-video').value.trim();
+      const wrap = document.getElementById('preview-video-wrap');
+      const player = document.getElementById('preview-video-player');
+
+      if (!raw) {
+        showToast('Cole um link ou código de vídeo primeiro', 'erro');
+        return;
+      }
+
+      const videoId = extrairVideoId(raw);
+      wrap.style.display = 'block';
+      player.innerHTML = `<iframe width="100%" height="100%" style="border:0;border-radius:var(--radius)"
+        src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>`;
+    };
+
+    window.editarExercicio = async (id) => {
+      const ex = await ExerciseService.buscarPorId(id);
+      limparForm();
+
+      document.getElementById('form-id').value = ex.id;
+      document.getElementById('f-nome').value = ex.name_pt || '';
+      document.getElementById('f-nome-en').value = ex.name_en || '';
+      document.getElementById('f-descricao').value = ex.description || '';
+      
+      document.getElementById('f-dificuldade').value = ex.difficulty_id || '';
+      document.getElementById('f-padrao-movimento').value = ex.movement_pattern_id || '';
+      document.getElementById('f-tipo-exercicio').value = ex.exercise_type_id || '';
+      document.getElementById('f-composto').value = String(ex.is_compound ?? false);
+      document.getElementById('f-unilateral').value = String(ex.is_unilateral ?? false);
+
+      // Mídia padrão
+      const defaultMedia = ex.exercise_media?.find(m => m.is_default && m.provider === 'youtube');
+      if (defaultMedia) {
+        document.getElementById('f-video').value = defaultMedia.video_id;
+      }
+
+      // Músculo principal
+      const primary = ex.exercise_muscles?.find(em => em.role === 'primary');
+      if (primary) {
+        document.getElementById('f-grupo-principal').value = primary.muscle_id;
+      }
+
+      // Músculos secundários
+      const secondaries = ex.exercise_muscles?.filter(em => em.role === 'secondary') || [];
+      secondaries.forEach(m => {
+        const c = document.querySelector(`#f-check-grupos-sec input[value="${m.muscle_id}"]`);
+        if (c) {
+          c.checked = true;
+          c.closest('.check-item').classList.add('checked');
+        }
+      });
+
+      // Músculos estabilizadores
+      const stabilizers = ex.exercise_muscles?.filter(em => em.role === 'stabilizer') || [];
+      stabilizers.forEach(m => {
+        const c = document.querySelector(`#f-check-grupos-estab input[value="${m.muscle_id}"]`);
+        if (c) {
+          c.checked = true;
+          c.closest('.check-item').classList.add('checked');
+        }
+      });
+
+      // Equipamentos
+      const equipment = ex.exercise_equipment || [];
+      equipment.forEach(eq => {
+        const c = document.querySelector(`#f-check-equipamentos input[value="${eq.equipment_id}"]`);
+        if (c) {
+          c.checked = true;
+          c.closest('.check-item').classList.add('checked');
+        }
+      });
+
+      document.getElementById('form-titulo').textContent = 'Editar exercício';
+      document.getElementById('modal-form').classList.add('open');
+    };
+
+    window.salvar = async () => {
+      const id = document.getElementById('form-id').value;
+      
+      const nomePt = document.getElementById('f-nome').value.trim();
+      const grupoPrincipal = document.getElementById('f-grupo-principal').value;
+
+      if (!nomePt) return showToast('Informe o nome do exercício', 'erro');
+      if (!grupoPrincipal) return showToast('Informe o músculo principal', 'erro');
+
+      // Mapear músculos selecionados
+      const muscles = [{ muscle_id: grupoPrincipal, role: 'primary' }];
+      document.querySelectorAll('#f-check-grupos-sec input:checked').forEach(c => {
+        if (c.value !== grupoPrincipal) {
+          muscles.push({ muscle_id: c.value, role: 'secondary' });
+        }
+      });
+      document.querySelectorAll('#f-check-grupos-estab input:checked').forEach(c => {
+        if (c.value !== grupoPrincipal) {
+          muscles.push({ muscle_id: c.value, role: 'stabilizer' });
+        }
+      });
+
+      // Mapear equipamentos
+      const equipment = [...document.querySelectorAll('#f-check-equipamentos input:checked')].map(c => ({
+        equipment_id: c.value,
+        required: true
+      }));
+
+      // Mapear mídia (YouTube)
+      const mediaInput = document.getElementById('f-video').value.trim();
+      const media = [];
+      if (mediaInput) {
+        const videoId = extrairVideoId(mediaInput);
+
+        media.push({
+          type: 'video',
+          provider: 'youtube',
+          video_id: videoId,
+          is_default: true
+        });
+      }
+
+      const payload = {
+        name_pt: nomePt,
+        name_en: document.getElementById('f-nome-en').value.trim() || null,
+        description: document.getElementById('f-descricao').value.trim() || null,
+        difficulty_id: document.getElementById('f-dificuldade').value || null,
+        movement_pattern_id: document.getElementById('f-padrao-movimento').value || null,
+        exercise_type_id: document.getElementById('f-tipo-exercicio').value || null,
+        is_compound: document.getElementById('f-composto').value === 'true',
+        is_unilateral: document.getElementById('f-unilateral').value === 'true',
+        muscles,
+        equipment,
+        media
+      };
+
+      try {
+        if (id) {
+          await ExerciseService.atualizar(id, payload);
+          showToast('Exercício atualizado com sucesso!', 'sucesso');
+        } else {
+          await ExerciseService.criar(payload, user.id);
+          showToast('Exercício criado com sucesso!', 'sucesso');
+        }
+        fecharForm();
+        await carregar();
+        if (id && exercicioDetalheAtual === id) {
+          await verDetalhe(id);
+        }
+      } catch(e) {
+        showToast('Erro ao salvar: ' + e.message, 'erro');
+      }
+    };
+
+    window.excluir = async (id) => {
+      if (!confirm('Remover este exercício da biblioteca?')) return;
+      try {
+        await ExerciseService.excluir(id);
+        showToast('Exercício removido', 'info');
+        if (exercicioDetalheAtual === id) {
+          exercicioDetalheAtual = null;
+          document.getElementById('detalhe-col').innerHTML = `
+            <div class="detalhe-vazio">
+              <div class="icon">🏋️</div>
+              <p>Selecione um exercício na lista<br>pra ver os detalhes.</p>
+            </div>`;
+          document.getElementById('detalhe-col').classList.remove('aberto');
+        }
+        await carregar();
+      } catch(e) {
+        showToast('Erro ao excluir: ' + e.message, 'erro');
+      }
+    };
+
+    window.sair = async () => { await supabase.auth.signOut(); window.location.href = '/index.html'; };
+
+    document.querySelectorAll('.modal-overlay').forEach(m => {
+      m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+    });
+
+    // Inicializar os dados do banco antes de listar
+    await inicializarDadosDominio();
+    await carregar();
+  </script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
+    }
+  </script>
+</body>
+</html>

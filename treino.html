@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#f97316" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+  <title>GymTracker — Treinar</title>
+  <link rel="stylesheet" href="css/global.css" />
+  <style>
+    /* ═══════════════════════════════════════════
+       SELEÇÃO DE FICHA
+    ═══════════════════════════════════════════ */
+    .content { padding: 32px 0 64px; }
+    .fichas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap: 16px; margin-top: 24px; }
+    .ficha-card { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; cursor: pointer; transition: all .2s; }
+    .ficha-card:hover { border-color: var(--orange); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(249,115,22,0.15); }
+    .ficha-card-nome { font-family: 'Barlow Condensed',sans-serif; font-size: 1.3rem; font-weight: 700; text-transform: uppercase; }
+    .ficha-card-desc { font-size: 13px; color: var(--text-2); margin-top: 4px; }
+    .ficha-card-meta { font-size: 12px; color: var(--text-3); margin-top: 12px; }
+
+    /* ═══════════════════════════════════════════
+       MOBILE — TELA DE EXECUÇÃO
+    ═══════════════════════════════════════════ */
+    .mobile-treino {
+      position: fixed; inset: 0; z-index: 500;
+      background: var(--bg);
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Header */
+    .m-header {
+      background: var(--bg-2); border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .m-header-nome { font-family: 'Barlow Condensed',sans-serif; font-size: 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text); }
+    .m-cronometro { font-family: 'Barlow Condensed',sans-serif; font-size: 1.4rem; font-weight: 700; color: var(--orange); }
+    .m-btn-fim { background: var(--orange); color: #fff; border: none; border-radius: 8px; padding: 7px 14px; font-size: 12px; font-weight: 700; cursor: pointer; }
+
+    /* Barra de progresso */
+    .m-progress {
+      background: var(--bg-2); border-bottom: 1px solid var(--border);
+      padding: 8px 16px; flex-shrink: 0;
+    }
+    .m-progress-track { height: 3px; background: var(--bg-4); border-radius: 2px; overflow: hidden; }
+    .m-progress-fill { height: 100%; background: var(--orange); border-radius: 2px; transition: width .4s ease; }
+    .m-progress-label { font-size: 11px; color: var(--text-3); margin-top: 5px; text-align: center; }
+
+    /* Lista de exercícios */
+    .m-lista {
+      flex: 1; overflow-y: auto; padding: 10px 12px;
+      display: flex; flex-direction: column; gap: 8px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .m-ex-item {
+      background: var(--bg-2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px 14px;
+      display: flex; align-items: center; gap: 12px;
+      cursor: pointer; transition: all .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .m-ex-item.done { border-color: var(--green); background: rgba(34,197,94,0.04); }
+    .m-ex-item.ativo { border-color: var(--orange); background: rgba(249,115,22,0.06); }
+
+    .m-ex-num {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; flex-shrink: 0;
+    }
+    .m-ex-num.done { background: var(--green); color: #fff; }
+    .m-ex-num.ativo { background: var(--orange); color: #fff; }
+    .m-ex-num.pend { background: var(--bg-4); color: var(--text-3); }
+
+    .m-ex-info { flex: 1; min-width: 0; }
+    .m-ex-nome { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .m-ex-nome.done { color: var(--text-2); }
+    .m-ex-meta { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+    .m-ex-meta.done { color: var(--green); }
+    .m-ex-meta.ativo { color: var(--orange); }
+    .m-ex-seta { color: var(--border-2); font-size: 18px; flex-shrink: 0; }
+    .m-ex-item.ativo .m-ex-seta { color: var(--orange); }
+
+    /* Footer fixo */
+    .m-footer {
+      background: var(--bg-2); border-top: 1px solid var(--border);
+      padding: 10px 12px; display: flex; gap: 8px; flex-shrink: 0;
+    }
+    .m-btn-abandonar {
+      flex: 1; padding: 12px; border: 1px solid var(--border-2);
+      border-radius: 10px; background: transparent; color: var(--text-2);
+      font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+    }
+    .m-btn-finalizar {
+      flex: 2; padding: 12px; border: none; border-radius: 10px;
+      font-family: 'Barlow Condensed',sans-serif; font-size: 1.1rem;
+      font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+      cursor: pointer; transition: all .2s;
+      background: var(--bg-4); color: var(--text-3); border: 1px solid var(--border-2);
+    }
+    .m-btn-finalizar.pronto {
+      background: var(--orange); color: #fff; border-color: var(--orange);
+    }
+
+    /* ═══════════════════════════════════════════
+       DRAWER — Séries do exercício
+    ═══════════════════════════════════════════ */
+    .drawer-overlay {
+      position: fixed; inset: 0; z-index: 600;
+      background: rgba(0,0,0,0.7);
+      display: flex; align-items: flex-end;
+      transition: opacity .2s;
+    }
+    .drawer-overlay.hidden { display: none; }
+
+    .drawer {
+      background: var(--bg);
+      border-radius: 20px 20px 0 0;
+      border: 1px solid var(--border-2);
+      border-bottom: none;
+      width: 100%; max-height: 92vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 0 0 env(safe-area-inset-bottom);
+      transform: translateY(0);
+      transition: transform .25s ease;
+    }
+
+    .drawer-handle { width: 36px; height: 4px; background: var(--border-2); border-radius: 2px; margin: 12px auto 0; }
+
+    .drawer-header {
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: flex-start; justify-content: space-between;
+    }
+    .drawer-nome { font-family: 'Barlow Condensed',sans-serif; font-size: 1.5rem; font-weight: 800; text-transform: uppercase; color: var(--text); line-height: 1; }
+    .drawer-grupo { font-size: 12px; color: var(--orange); margin-top: 3px; }
+    .drawer-close { background: var(--bg-3); border: none; border-radius: 50%; width: 28px; height: 28px; color: var(--text-2); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+    .drawer-body { padding: 12px 16px 24px; display: flex; flex-direction: column; gap: 10px; }
+
+    /* Referência */
+    .drawer-ref {
+      background: var(--bg-2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 10px 12px;
+      display: flex; gap: 16px;
+    }
+    .ref-col .ref-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text-3); margin-bottom: 4px; }
+    .ref-val { font-size: 14px; color: var(--text-2); font-family: 'Barlow Condensed',sans-serif; }
+    .ref-val.pr { color: var(--yellow); }
+
+    /* Sugestão */
+    .drawer-sugestao {
+      background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.2);
+      border-radius: var(--radius); padding: 10px 12px; font-size: 13px; color: var(--text-2);
+    }
+    .drawer-sugestao strong { color: var(--orange); }
+
+    /* Vídeo */
+    .drawer-video {
+      background: var(--bg-2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 10px 12px;
+      font-size: 13px; color: var(--text-2); text-align: center;
+      text-decoration: none; display: block;
+    }
+
+    /* Cards de série */
+    .serie-card {
+      background: var(--bg-2); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 12px;
+    }
+    .serie-card.done { border-color: var(--green); background: rgba(34,197,94,0.04); }
+    .serie-card.active { border-color: var(--orange); }
+    .serie-card.locked { opacity: 0.4; }
+
+    .serie-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .serie-card-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); }
+    .serie-card-done-label { font-size: 12px; font-weight: 700; color: var(--green); }
+    .serie-card-pr { font-size: 11px; color: var(--yellow); font-weight: 700; }
+    .serie-card-resumo { font-family: 'Barlow Condensed',sans-serif; font-size: 1.4rem; font-weight: 700; color: var(--text); }
+    .serie-card-sub { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+    .serie-locked-msg { font-size: 12px; color: var(--text-3); }
+
+    .serie-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+    .inp-group .inp-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text-3); margin-bottom: 4px; }
+
+    .m-input {
+      background: var(--bg-3); border: 1px solid var(--border-2); border-radius: 10px;
+      color: var(--text); font-family: 'Barlow Condensed',sans-serif;
+      font-size: 2rem; font-weight: 700; padding: 8px; text-align: center;
+      width: 100%; outline: none; -webkit-appearance: none; box-sizing: border-box;
+    }
+    .m-input:focus { border-color: var(--orange); }
+
+    .m-select {
+      background: var(--bg-3); border: 1px solid var(--border-2); border-radius: 8px;
+      color: var(--text-2); font-size: 13px; font-weight: 600; padding: 8px 10px;
+      width: 100%; outline: none; font-family: inherit; box-sizing: border-box;
+    }
+
+    .m-btn-confirmar {
+      width: 100%; padding: 13px; border: none; border-radius: 10px;
+      background: var(--orange); color: #fff;
+      font-family: 'Barlow Condensed',sans-serif; font-size: 1.1rem;
+      font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+      cursor: pointer; margin-top: 4px;
+    }
+    .m-btn-confirmar:active { transform: scale(0.98); }
+
+    .btn-serie-extra {
+      width: 100%; padding: 11px; border: 1px dashed var(--border-2);
+      border-radius: 10px; background: transparent; color: var(--text-3);
+      font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+    }
+
+    /* Timer fullscreen */
+    .m-timer {
+      display: none; position: fixed; inset: 0; z-index: 700;
+      background: var(--bg);
+      flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+    }
+    .m-timer.active { display: flex; }
+    .m-timer-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-3); }
+    .m-timer-display { font-family: 'Barlow Condensed',sans-serif; font-size: 5.5rem; font-weight: 800; color: var(--orange); line-height: 1; }
+    .m-timer-display.urgente { color: var(--red); }
+    .m-timer-prog { width: 200px; height: 4px; background: var(--bg-3); border-radius: 2px; overflow: hidden; }
+    .m-timer-prog-fill { height: 100%; background: var(--orange); border-radius: 2px; transition: width .9s linear; }
+    .m-timer-presets { display: flex; gap: 8px; }
+    .m-timer-preset { background: var(--bg-3); border: 1px solid var(--border-2); border-radius: 8px; color: var(--text-2); font-size: 13px; font-weight: 600; padding: 7px 14px; cursor: pointer; font-family: inherit; }
+    .m-timer-prox { text-align: center; }
+    .m-timer-prox .label { font-size: 11px; color: var(--text-3); margin-bottom: 3px; }
+    .m-timer-prox .nome { font-family: 'Barlow Condensed',sans-serif; font-size: 1.1rem; font-weight: 700; color: var(--text); }
+    .m-timer-actions { display: flex; gap: 10px; }
+    .m-timer-btn { padding: 12px 24px; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; border: none; font-family: inherit; }
+    .m-timer-btn.skip { background: var(--bg-3); color: var(--text-2); border: 1px solid var(--border-2); }
+    .m-timer-btn.pause { background: var(--orange); color: #fff; }
+
+    /* Resumo */
+    .m-resumo {
+      position: fixed; inset: 0; z-index: 500; background: var(--bg);
+      overflow-y: auto; padding: 24px 16px 48px;
+    }
+    .m-resumo-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .m-resumo-stat { background: var(--bg-2); border-radius: var(--radius-lg); padding: 16px; text-align: center; }
+    .m-resumo-stat .label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text-3); margin-bottom: 6px; }
+    .m-resumo-stat .value { font-family: 'Barlow Condensed',sans-serif; font-size: 2rem; font-weight: 800; color: var(--orange); }
+
+    /* Desktop resumo */
+    .resumo-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin: 24px 0; }
+    .pr-item { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: rgba(234,179,8,0.08); border: 1px solid rgba(234,179,8,0.2); border-radius: var(--radius); }
+    .progressao-sugestao { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); border-radius: var(--radius); padding: 16px; margin-top: 16px; }
+
+    @media (max-width: 768px) {
+      .navbar { display: none; }
+      .page-wrapper { padding: 0 16px; }
+      .fichas-grid { grid-template-columns: 1fr; }
+    }
+    .add-ex-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px; background: var(--bg-3); border: 1px solid var(--border);
+      border-radius: var(--radius); cursor: pointer;
+    }
+    .add-ex-item:hover { background: var(--bg-4); }
+    .add-ex-item .nome { font-size: 13px; font-weight: 600; }
+    .add-ex-item .sub { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+    .add-ex-item .plus { color: var(--orange); font-weight: 700; font-size: 18px; }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar" id="main-navbar">
+    <a class="navbar-brand" href="/dashboard.html">Gym<span>Tracker</span></a>
+    <div class="navbar-nav">
+      <a href="/dashboard.html">Início</a>
+      <a href="/biblioteca.html">Biblioteca</a>
+      <a href="/fichas.html">Fichas</a>
+      <a href="/treino.html" class="active">Treinar</a>
+      <a href="/historico.html">Histórico</a>
+      <a href="/relatorio.html">Relatório</a>
+      <a href="/perfil.html">Perfil</a>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="sair()">Sair</button>
+  </nav>
+
+  <!-- ETAPA 1: Seleção -->
+  <div id="etapa-selecao">
+    <div class="page-wrapper">
+      <div class="content">
+        <div class="page-header flex-between">
+          <div>
+            <h1>Iniciar Treino</h1>
+            <p>Selecione uma ficha para começar</p>
+          </div>
+          <button class="btn btn-ghost" onclick="iniciarTreinoLivre()">🆓 Treino livre</button>
+        </div>
+        <div id="fichas-grid" class="fichas-grid">
+          <div style="color:var(--text-3);text-align:center;padding:48px;grid-column:1/-1">Carregando...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ETAPA 2: Execução mobile -->
+  <div id="etapa-execucao" style="display:none">
+    <div class="mobile-treino" id="mobile-treino">
+
+      <div class="m-header">
+        <div class="m-header-nome" id="m-treino-nome">—</div>
+        <div class="m-cronometro" id="m-cronometro">00:00</div>
+        <button class="m-btn-fim" onclick="confirmarFinalizar()">✓ Fim</button>
+      </div>
+
+      <div class="m-progress">
+        <div class="m-progress-track">
+          <div class="m-progress-fill" id="m-progress-fill" style="width:0%"></div>
+        </div>
+        <div class="m-progress-label" id="m-progress-label">0 de 0 exercícios</div>
+      </div>
+
+      <div class="m-lista" id="m-lista"></div>
+
+      <div class="m-footer">
+        <button class="m-footer-abandonar m-btn-abandonar" onclick="confirmarAbandonar()">Abandonar</button>
+        <button class="m-btn-finalizar" id="m-btn-finalizar" onclick="confirmarFinalizar()">✓ Finalizar treino</button>
+      </div>
+    </div>
+
+    <!-- Drawer -->
+    <div class="drawer-overlay hidden" id="drawer-overlay" onclick="fecharDrawerClick(event)">
+      <div class="drawer" id="drawer">
+        <div class="drawer-handle"></div>
+        <div class="drawer-header">
+          <div>
+            <div class="drawer-nome" id="d-nome">—</div>
+            <div class="drawer-grupo" id="d-grupo"></div>
+          </div>
+          <button class="drawer-close" onclick="fecharDrawer()">✕</button>
+        </div>
+        <div class="drawer-body" id="d-body"></div>
+      </div>
+    </div>
+
+    <!-- Timer -->
+    <div class="m-timer" id="m-timer">
+      <div class="m-timer-label">⏱ Descanso</div>
+      <div class="m-timer-display" id="m-timer-display">01:30</div>
+      <div class="m-timer-prog"><div class="m-timer-prog-fill" id="m-timer-fill" style="width:100%"></div></div>
+      <div class="m-timer-presets">
+        <button class="m-timer-preset" onclick="setTimer(45)">45s</button>
+        <button class="m-timer-preset" onclick="setTimer(60)">1 min</button>
+        <button class="m-timer-preset" onclick="setTimer(90)">90s</button>
+        <button class="m-timer-preset" onclick="setTimer(120)">2 min</button>
+      </div>
+      <div class="m-timer-prox" id="m-timer-prox" style="display:none">
+        <div class="label">Próximo exercício</div>
+        <div class="nome" id="m-timer-prox-nome">—</div>
+      </div>
+      <div class="m-timer-actions">
+        <button class="m-timer-btn skip" onclick="pularTimer()">Pular</button>
+        <button class="m-timer-btn pause" id="m-timer-toggle" onclick="toggleTimer()">Pausar</button>
+      </div>
+    </div>
+
+    <!-- Resumo -->
+    <div id="m-resumo" style="display:none" class="m-resumo">
+      <div style="text-align:center;margin-bottom:28px">
+        <div style="font-size:48px">🎉</div>
+        <h1 style="margin-top:8px">Treino Concluído!</h1>
+        <p id="m-resumo-ficha" style="color:var(--text-2);margin-top:4px"></p>
+      </div>
+      <div class="m-resumo-stats">
+        <div class="m-resumo-stat"><div class="label">Duração</div><div class="value" id="m-resumo-duracao">—</div><div style="font-size:11px;color:var(--text-3)">min</div></div>
+        <div class="m-resumo-stat"><div class="label">Séries</div><div class="value" id="m-resumo-series">—</div><div style="font-size:11px;color:var(--text-3)">realizadas</div></div>
+        <div class="m-resumo-stat" style="grid-column:1/-1"><div class="label">Volume</div><div class="value" id="m-resumo-volume">—</div><div style="font-size:11px;color:var(--text-3)">kg levantados</div></div>
+      </div>
+      <div id="m-resumo-prs" style="margin-bottom:20px"></div>
+      <div id="m-resumo-prog" style="margin-bottom:28px"></div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <a href="/dashboard.html" class="btn btn-primary btn-full btn-lg">Ir ao Dashboard</a>
+        <a href="/treino.html" class="btn btn-ghost btn-full">Treinar novamente</a>
+        <a href="/historico.html" class="btn btn-ghost btn-full">Ver histórico</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ETAPA 2: Execução DESKTOP -->
+  <div id="etapa-execucao-desktop" style="display:none">
+    <div style="background:var(--bg-2);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:60px;z-index:50">
+      <div>
+        <h2 style="font-size:1.1rem;margin:0" id="d-treino-nome">—</h2>
+        <span style="font-size:12px;color:var(--text-2)" id="d-ex-atual">—</span>
+      </div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:1.8rem;font-weight:700;color:var(--orange)" id="d-cronometro">00:00</div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-ghost btn-sm" onclick="confirmarAbandonar()">Abandonar</button>
+        <button class="btn btn-primary" onclick="confirmarFinalizar()">✓ Finalizar treino</button>
+      </div>
+    </div>
+    <div class="page-wrapper">
+      <div style="display:grid;grid-template-columns:260px 1fr;gap:24px;padding:24px 0">
+        <div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-3);margin-bottom:10px">Exercícios</div>
+          <div id="d-nav" style="display:flex;flex-direction:column;gap:4px"></div>
+        </div>
+        <div id="d-main"></div>
+      </div>
+    </div>
+    <!-- Timer desktop -->
+    <div style="display:none;position:fixed;bottom:24px;right:24px;z-index:200;background:var(--bg-2);border:1px solid var(--border-2);border-radius:var(--radius-lg);padding:20px 24px;min-width:220px;box-shadow:0 8px 32px rgba(0,0,0,0.6)" id="d-timer">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-3);margin-bottom:8px">⏱ Descanso</div>
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        <button onclick="setTimerD(60)" style="background:var(--bg-4);border:1px solid var(--border-2);border-radius:6px;color:var(--text-2);font-size:12px;font-weight:600;padding:4px 10px;cursor:pointer">1 min</button>
+        <button onclick="setTimerD(90)" style="background:var(--bg-4);border:1px solid var(--border-2);border-radius:6px;color:var(--text-2);font-size:12px;font-weight:600;padding:4px 10px;cursor:pointer">90s</button>
+        <button onclick="setTimerD(120)" style="background:var(--bg-4);border:1px solid var(--border-2);border-radius:6px;color:var(--text-2);font-size:12px;font-weight:600;padding:4px 10px;cursor:pointer">2 min</button>
+      </div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:3rem;font-weight:800;color:var(--orange);line-height:1;text-align:center" id="d-timer-display">01:30</div>
+      <div style="height:4px;background:var(--bg-4);border-radius:2px;margin:12px 0;overflow:hidden"><div id="d-timer-bar" style="height:100%;background:var(--orange);border-radius:2px;transition:width .9s linear;width:100%"></div></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" style="flex:1" onclick="pularTimerD()">Pular</button>
+        <button class="btn btn-primary btn-sm" style="flex:1" id="d-timer-toggle" onclick="toggleTimerD()">Pausar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ETAPA 3: Resumo desktop -->
+  <div id="etapa-resumo-desktop" style="display:none">
+    <div class="page-wrapper">
+      <div class="content">
+        <div class="page-header flex-between">
+          <div><h1>🎉 Treino Concluído!</h1><p id="d-resumo-ficha" style="color:var(--text-2)"></p></div>
+          <a href="/dashboard.html" class="btn btn-primary btn-lg">Ir ao Dashboard</a>
+        </div>
+        <div class="resumo-stats">
+          <div class="stat-card"><div class="label">Duração</div><div class="value orange" id="d-resumo-duracao">—</div><div class="sub">minutos</div></div>
+          <div class="stat-card"><div class="label">Séries</div><div class="value" id="d-resumo-series">—</div><div class="sub">séries</div></div>
+          <div class="stat-card"><div class="label">Volume</div><div class="value" id="d-resumo-volume">—</div><div class="sub">kg</div></div>
+        </div>
+        <div id="d-resumo-prs"></div>
+        <div id="d-resumo-prog"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Adicionar exercício (Treino livre) -->
+  <div class="modal-overlay" id="modal-add-ex">
+    <div class="modal" style="max-width:480px">
+      <div class="modal-header">
+        <h2>Adicionar exercício</h2>
+        <button class="modal-close" onclick="fecharModalAddEx()">✕</button>
+      </div>
+      <input type="text" id="add-ex-busca" placeholder="Buscar exercício..." oninput="buscarExercicioLivre()" style="margin-bottom:12px" />
+      <div id="add-ex-resultados" style="display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase, requireAuth, showToast } from './js/supabase.js';
+    import { WorkoutSessionService } from './js/WorkoutSessionService.js';
+    import { ExerciseService } from './js/ExerciseService.js';
+
+    const user = await requireAuth();
+    if (!user) { window.location.href = '/index.html'; throw new Error('unauth'); }
+
+    const isMobile = window.innerWidth <= 768;
+
+    // Estado global
+    let sessaoId = null, fichaAtiva = null, exercicios = [], treinoLivre = false;
+    let seriesCache = {}, inicioTreino = null;
+    let cronometroInterval = null;
+    let timerInterval = null, timerTotal = 90, timerRestante = 90, timerPausado = false;
+    let exercicioAtivoId = null;
+    let prsDaSessao = [], sugestoesCarga = [];
+    let fichas = [];
+
+    // ── Carregar fichas ─────────────────────────────────
+    fichas = await WorkoutSessionService.listarFichasComContagem(user.id);
+
+    const grid = document.getElementById('fichas-grid');
+    if (!fichas.length) {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">📋</div><p>Nenhuma ficha criada.</p><a href="/fichas.html" class="btn btn-primary">Criar ficha</a></div>`;
+    } else {
+      grid.innerHTML = fichas.map(f => `
+        <div class="ficha-card" onclick="iniciarTreino('${f.id}')">
+          <div class="ficha-card-nome">${f.nome}</div>
+          ${f.descricao ? `<div class="ficha-card-desc">${f.descricao}</div>` : ''}
+          <div class="ficha-card-meta">${f.total_ex} exercício${f.total_ex !== 1 ? 's' : ''}</div>
+          <div style="margin-top:16px"><span class="btn btn-primary btn-sm">▶ Iniciar</span></div>
+        </div>`).join('');
+    }
+
+    // ── Iniciar treino (com ficha) ──────────────────────
+    window.iniciarTreino = async (fichaId) => {
+      fichaAtiva = fichas.find(f => f.id === fichaId);
+
+      const { exercicios: exs, sessaoId: novaSessaoId } = await WorkoutSessionService.iniciarSessao(user.id, fichaId, fichaAtiva.nome);
+      if (!exs.length) { showToast('Esta ficha não tem exercícios!', 'erro'); return; }
+      exercicios = exs;
+      sessaoId = novaSessaoId;
+
+      exercicios.forEach(ex => {
+        const carga = ex.carga_sugerida || ex.carga_atual || ex.carga_padrao || '';
+
+        if (ex.series_granulares?.length) {
+          // Cada série tem seu próprio alvo de reps/descanso/técnica,
+          // configurados na ficha (bi-set, drop set, rest-pause, etc.)
+          seriesCache[ex.id] = ex.series_granulares.map((sg, i) => ({
+            num: i+1, carga,
+            reps: sg.ate_falha ? '' : (sg.reps_alvo_min ?? ''),
+            repsPlaceholder: sg.ate_falha ? 'até a falha' : `${sg.reps_alvo_min ?? '?'}-${sg.reps_alvo_max ?? '?'}`,
+            tipo: sg.tecnica === 'aquecimento' ? 'aquecimento' : 'normal',
+            rpe: ex.rpe_alvo || '',
+            descansoOverride: sg.descanso_seg || null,
+            tecnica: sg.tecnica || 'nenhuma',
+            tecnicaDetalhe: sg.tecnica_detalhe || '',
+            ateFalha: sg.ate_falha,
+            confirmada:false, is_pr:false, one_rm:null, db_id:null
+          }));
+        } else {
+          const reps = ex.reps_padrao?.split('-')[0] || '';
+          seriesCache[ex.id] = Array.from({ length: ex.series_padrao || 3 }, (_, i) => ({
+            num: i+1, carga, reps, tipo:'normal', rpe: ex.rpe_alvo||'',
+            confirmada:false, is_pr:false, one_rm:null, db_id:null
+          }));
+        }
+      });
+
+      iniciarUIExecucao();
+    };
+
+    // ── Iniciar treino livre (sem ficha) ────────────────
+    window.iniciarTreinoLivre = async () => {
+      treinoLivre = true;
+      fichaAtiva = { nome: 'Treino livre' };
+      sessaoId = await WorkoutSessionService.iniciarSessaoLivre(user.id);
+      exercicios = [];
+      iniciarUIExecucao();
+      // No treino livre já começa abrindo o buscador, senão a tela fica vazia
+      abrirModalAddEx();
+    };
+
+    function iniciarUIExecucao() {
+      inicioTreino = new Date();
+      document.getElementById('etapa-selecao').style.display = 'none';
+      document.getElementById('main-navbar').style.display = 'none';
+      if (isMobile) iniciarMobile();
+      else iniciarDesktop();
+      cronometroInterval = setInterval(atualizarCronometro, 1000);
+    }
+
+    // ── Adicionar exercício durante o treino livre ──────
+    window.abrirModalAddEx = () => {
+      document.getElementById('modal-add-ex').classList.add('open');
+      document.getElementById('add-ex-busca').value = '';
+      document.getElementById('add-ex-resultados').innerHTML = '';
+      document.getElementById('add-ex-busca').focus();
+    };
+    window.fecharModalAddEx = () => {
+      document.getElementById('modal-add-ex').classList.remove('open');
+    };
+
+    let buscaAddExTimeout = null;
+    window.buscarExercicioLivre = () => {
+      clearTimeout(buscaAddExTimeout);
+      buscaAddExTimeout = setTimeout(async () => {
+        const termo = document.getElementById('add-ex-busca').value.trim();
+        const resultadosEl = document.getElementById('add-ex-resultados');
+        if (termo.length < 2) { resultadosEl.innerHTML = ''; return; }
+
+        const encontrados = await ExerciseService.listar({ busca: termo });
+        resultadosEl.innerHTML = encontrados.slice(0, 20).map(ex => {
+          const musculo = ex.exercise_muscles?.find(m => m.role === 'primary')?.muscles?.name_pt || '';
+          return `
+            <div class="add-ex-item" onclick='adicionarExercicioLivre(${JSON.stringify({id:ex.id, nome:ex.name_pt, musculo}).replace(/'/g,"&#39;")})'>
+              <div>
+                <div class="nome">${ex.name_pt}</div>
+                <div class="sub">${musculo}</div>
+              </div>
+              <div class="plus">+</div>
+            </div>`;
+        }).join('') || `<div style="color:var(--text-3);text-align:center;padding:16px;font-size:13px">Nada encontrado.</div>`;
+      }, 300);
+    };
+
+    window.adicionarExercicioLivre = (exSelecionado) => {
+      const localId = 'livre-' + crypto.randomUUID();
+      const novoEx = {
+        id: localId,
+        livre: true,
+        nome: exSelecionado.nome,
+        grupo_muscular: exSelecionado.musculo,
+        exercises: { id: exSelecionado.id },
+        descanso_series_seg: 90,
+        series_padrao: 3,
+        carga_atual: null
+      };
+      exercicios.push(novoEx);
+      seriesCache[localId] = Array.from({ length: 3 }, (_, i) => ({
+        num: i+1, carga:'', reps:'', tipo:'normal', rpe:'',
+        confirmada:false, is_pr:false, one_rm:null, db_id:null
+      }));
+
+      fecharModalAddEx();
+      showToast(`${exSelecionado.nome} adicionado!`, 'sucesso');
+
+      if (isMobile) renderListaMobile();
+      else { renderNavDesktop(); selecionarExDesktop(exercicios.length - 1); }
+    };
+
+    function atualizarCronometro() {
+      const diff = Math.floor((new Date() - inicioTreino) / 1000);
+      const m = String(Math.floor(diff/60)).padStart(2,'0');
+      const s = String(diff%60).padStart(2,'0');
+      const str = `${m}:${s}`;
+      const mc = document.getElementById('m-cronometro');
+      const dc = document.getElementById('d-cronometro');
+      if (mc) mc.textContent = str;
+      if (dc) dc.textContent = str;
+    }
+
+    // ══════════════════════════════════════════════════
+    // MOBILE
+    // ══════════════════════════════════════════════════
+    function iniciarMobile() {
+      document.getElementById('etapa-execucao').style.display = 'block';
+      document.getElementById('m-treino-nome').textContent = fichaAtiva.nome;
+      renderListaMobile();
+    }
+
+    function renderListaMobile() {
+      const done = exercicios.filter(ex => (seriesCache[ex.id]||[]).some(s => s.confirmada)).length;
+      const pct = exercicios.length ? (done/exercicios.length)*100 : 0;
+      document.getElementById('m-progress-fill').style.width = pct+'%';
+      document.getElementById('m-progress-label').textContent = `${done} de ${exercicios.length} exercício${exercicios.length!==1?'s':''} concluído${done!==1?'s':''}`;
+
+      const todosFeitos = done === exercicios.length && exercicios.length > 0;
+      const btnF = document.getElementById('m-btn-finalizar');
+      btnF.classList.toggle('pronto', todosFeitos);
+
+      const lista = document.getElementById('m-lista');
+      const itensHtml = exercicios.map((ex, i) => {
+        const series = seriesCache[ex.id] || [];
+        const seriesFeitas = series.filter(s => s.confirmada).length;
+        const estaFeito = seriesFeitas > 0 && seriesFeitas >= series.length;
+        const emExecucao = exercicioAtivoId === ex.id && !estaFeito;
+        const cls = estaFeito ? 'done' : emExecucao ? 'ativo' : '';
+        const numCls = estaFeito ? 'done' : emExecucao ? 'ativo' : 'pend';
+        const numLabel = estaFeito ? '✓' : i+1;
+        let meta = `0/${series.length} séries`;
+        if (seriesFeitas > 0) {
+          const ultima = [...series].reverse().find(s => s.confirmada);
+          meta = estaFeito
+            ? `${series.length}/${series.length} séries · ${ultima?.carga||'—'} kg`
+            : `${seriesFeitas}/${series.length} séries · em execução`;
+        }
+        const metaCls = estaFeito ? 'done' : emExecucao ? 'ativo' : '';
+        return `<div class="m-ex-item ${cls}" onclick="abrirDrawer('${ex.id}')">
+          <div class="m-ex-num ${numCls}">${numLabel}</div>
+          <div class="m-ex-info">
+            <div class="m-ex-nome ${estaFeito?'done':''}">${ex.nome}</div>
+            <div class="m-ex-meta ${metaCls}">${meta}</div>
+          </div>
+          <div class="m-ex-seta">›</div>
+        </div>`;
+      }).join('');
+
+      const vazioHtml = !exercicios.length
+        ? `<div style="color:var(--text-3);text-align:center;padding:32px 16px">Nenhum exercício ainda.</div>` : '';
+      const btnAddHtml = treinoLivre
+        ? `<button class="btn btn-ghost btn-full" style="margin-top:8px" onclick="abrirModalAddEx()">+ Adicionar exercício</button>` : '';
+
+      lista.innerHTML = itensHtml + vazioHtml + btnAddHtml;
+    }
+
+    // ── Drawer ─────────────────────────────────────────
+    window.abrirDrawer = async (exId) => {
+      exercicioAtivoId = exId;
+      const ex = exercicios.find(e => e.id === exId);
+      document.getElementById('d-nome').textContent = ex.nome;
+      document.getElementById('d-grupo').textContent = ex.grupo_muscular || '';
+
+      // Buscar histórico (exercício do treino livre não tem histórico de ficha)
+      const hist = ex.livre ? [] : await WorkoutSessionService.obterHistoricoExercicio(exId, sessaoId, 9);
+      const pr = await WorkoutSessionService.obterPR(user.id, ex.nome);
+
+      const series = seriesCache[exId];
+      let html = '';
+
+      // Vídeo
+      if (ex.video_url) {
+        html += `<a class="drawer-video" href="${ex.video_url}" target="_blank">▶ Ver execução no YouTube</a>`;
+      }
+
+      // Referência
+      if (hist?.length || pr?.melhor_carga_kg) {
+        const antMap = {};
+        (hist||[]).forEach(s => { if (!antMap[s.serie_num]) antMap[s.serie_num] = s; });
+        html += `<div class="drawer-ref">
+          <div class="ref-col">
+            <div class="ref-label">Último treino</div>
+            ${Object.values(antMap).slice(0,3).map(s => `<div class="ref-val">${s.carga_kg||'—'}×${s.reps_feitas||'—'}</div>`).join('') || '<div class="ref-val" style="color:var(--text-3)">—</div>'}
+          </div>
+          <div class="ref-col">
+            <div class="ref-label">Recorde</div>
+            ${pr?.melhor_carga_kg ? `<div class="ref-val pr">${pr.melhor_carga_kg}×${pr.melhor_reps||'—'}</div><div style="font-size:11px;color:var(--text-3);margin-top:2px">1RM: ${pr.melhor_one_rm||'—'} kg</div>` : '<div class="ref-val" style="color:var(--text-3)">—</div>'}
+          </div>
+        </div>`;
+      }
+
+      // Sugestão engine
+      if (ex.carga_atual && hist?.length >= 2) {
+        const comRpe = (hist||[]).filter(s => s.rpe);
+        if (comRpe.length) {
+          const rpeMedio = comRpe.reduce((a,s) => a+s.rpe, 0) / comRpe.length;
+          if (rpeMedio <= 7) {
+            const inc = ex.incremento_kg || 2.5;
+            html += `<div class="drawer-sugestao">💡 RPE médio ${rpeMedio.toFixed(1)} — tente <strong>${(parseFloat(ex.carga_atual)+inc).toFixed(1)} kg</strong> hoje</div>`;
+          }
+        }
+      }
+
+      // Séries
+      html += renderSeriesMobile(exId, series, false);
+
+      // Extra
+      html += `<button class="btn-serie-extra" onclick="adicionarSerie('${exId}')">+ Série extra</button>`;
+
+      document.getElementById('d-body').innerHTML = html;
+      document.getElementById('drawer-overlay').classList.remove('hidden');
+      renderListaMobile();
+    };
+
+    function renderSeriesMobile(exId, series, rerender = true) {
+      let html = '';
+      series.forEach((s, i) => {
+        const prevFeita = i === 0 || series[i-1].confirmada;
+        if (s.confirmada) {
+          html += `<div class="serie-card done">
+            <div class="serie-card-header">
+              <span class="serie-card-done-label">✓ Série ${s.num}</span>
+              ${s.is_pr ? '<span class="serie-card-pr">🏆 PR!</span>' : ''}
+            </div>
+            <div class="serie-card-resumo">${s.carga||'—'} kg × ${s.reps||'—'} reps</div>
+            ${s.rpe ? `<div class="serie-card-sub">RPE ${s.rpe}${s.one_rm ? ' · 1RM: '+s.one_rm+' kg' : ''}</div>` : ''}
+          </div>`;
+        } else if (prevFeita) {
+          const tecnicaLabel = { drop_set:'Drop set', rest_pause:'Rest-pause', parciais_apos_falha:'Parciais após falha', pico_contracao:'Pico de contração' }[s.tecnica];
+          html += `<div class="serie-card active" id="serie-card-${exId}-${i}">
+            <div class="serie-card-header">
+              <span class="serie-card-label">Série ${s.num} ${tecnicaLabel ? `<span class="superset-badge">${tecnicaLabel}</span>` : ''}</span>
+              <select class="m-select" style="width:auto;font-size:12px;padding:5px 8px" onchange="updateSerie('${exId}',${i},'tipo',this.value)">
+                <option value="normal" ${s.tipo==='normal'?'selected':''}>Normal</option>
+                <option value="warmup" ${s.tipo==='warmup'?'selected':''}>Aquec.</option>
+                <option value="dropset" ${s.tipo==='dropset'?'selected':''}>Drop</option>
+                <option value="falha" ${s.tipo==='falha'?'selected':''}>Falha</option>
+              </select>
+            </div>
+            ${s.repsPlaceholder ? `<div style="font-size:11px;color:var(--text-3);margin-bottom:6px">🎯 Alvo: ${s.repsPlaceholder} reps${s.descansoOverride?` · ⏱ ${s.descansoOverride}s`:''}</div>` : ''}
+            <div class="serie-inputs">
+              <div class="inp-group">
+                <div class="inp-label">Peso (kg)</div>
+                <input class="m-input" type="number" inputmode="decimal" step="0.5" min="0"
+                  value="${s.carga}" placeholder="0"
+                  oninput="updateSerie('${exId}',${i},'carga',this.value)" />
+              </div>
+              <div class="inp-group">
+                <div class="inp-label">Reps</div>
+                <input class="m-input" type="number" inputmode="numeric" min="1"
+                  value="${s.reps}" placeholder="${s.repsPlaceholder || '0'}"
+                  oninput="updateSerie('${exId}',${i},'reps',this.value)" />
+              </div>
+            </div>
+            <div style="margin-bottom:8px">
+              <div class="inp-label">RPE</div>
+              <select class="m-select" onchange="updateSerie('${exId}',${i},'rpe',this.value)">
+                <option value="">—</option>
+                ${[6,7,8,9,10].map(r=>`<option value="${r}" ${s.rpe==r?'selected':''}>${r} – ${['Muito leve','Leve','Difícil','Quase falha','Falha'][r-6]}</option>`).join('')}
+              </select>
+            </div>
+            <button class="m-btn-confirmar" onclick="confirmarSerie('${exId}',${i})">✓ Confirmar série ${s.num}</button>
+          </div>`;
+        } else {
+          html += `<div class="serie-card locked">
+            <div class="serie-card-header"><span class="serie-card-label">Série ${s.num}</span></div>
+            <div class="serie-locked-msg">Conclua a série ${s.num-1} primeiro</div>
+          </div>`;
+        }
+      });
+      if (rerender) {
+        const body = document.getElementById('d-body');
+        if (body) {
+          const seriesContainer = body.querySelector('.series-container');
+          if (seriesContainer) seriesContainer.innerHTML = html;
+        }
+      }
+      return html;
+    }
+
+    window.updateSerie = (exId, i, campo, valor) => {
+      if (seriesCache[exId]?.[i]) seriesCache[exId][i][campo] = valor;
+    };
+
+    window.adicionarSerie = (exId) => {
+      const series = seriesCache[exId];
+      series.push({ num:series.length+1, carga:series[series.length-1]?.carga||'', reps:'', tipo:'normal', rpe:'', confirmada:false, is_pr:false, one_rm:null, db_id:null });
+      abrirDrawer(exId);
+    };
+
+    window.confirmarSerie = async (exId, idx) => {
+      const s = seriesCache[exId][idx];
+      if (s.confirmada) return;
+
+      // Ler inputs
+      const card = document.getElementById(`serie-card-${exId}-${idx}`);
+      if (card) {
+        const inputs = card.querySelectorAll('.m-input');
+        if (inputs[0]) s.carga = inputs[0].value;
+        if (inputs[1]) s.reps = inputs[1].value;
+        const selects = card.querySelectorAll('.m-select');
+        if (selects[0]) s.tipo = selects[0].value;
+        if (selects[1]) s.rpe = selects[1].value;
+      }
+
+      const carga = parseFloat(s.carga)||null;
+      const reps = parseInt(s.reps)||null;
+      const rpe = parseInt(s.rpe)||null;
+      if (!reps) { showToast('Informe as repetições', 'erro'); return; }
+
+      const ex = exercicios.find(e => e.id === exId);
+
+      let resultado;
+      try {
+        resultado = await WorkoutSessionService.registrarSerie({
+          userId: user.id, sessaoId, fichaExercicioId: ex.livre ? null : exId,
+          exerciseId: ex.exercises?.id, exercicioNome: ex.nome,
+          serieNum: s.num, tipo: s.tipo, carga, reps, rpe
+        });
+      } catch (err) {
+        showToast(err.message || 'Erro ao registrar série', 'erro');
+        return;
+      }
+      const { is_pr, one_rm } = resultado;
+
+      if (is_pr) {
+        prsDaSessao.push({ exercicio:ex.nome, carga, reps, one_rm });
+        showToast('🏆 Novo PR!', 'sucesso');
+        if (!ex.livre && carga && (!ex.carga_maxima || carga > ex.carga_maxima)) {
+          await WorkoutSessionService.atualizarCargaMaxima(exId, carga);
+          ex.carga_maxima = carga;
+        }
+      }
+      if (carga) ex.carga_atual = carga;
+
+      seriesCache[exId][idx] = { ...s, confirmada:true, is_pr, one_rm, db_id:resultado.db_id };
+      renderListaMobile();
+
+      // Timer e reabrir drawer
+      const descanso = s.descansoOverride || ex.descanso_series_seg || 90;
+      const proximo = exercicios[exercicios.findIndex(e=>e.id===exId)+1];
+      iniciarTimer(descanso, proximo?.nome);
+
+      // Reabrir drawer atualizado
+      await abrirDrawer(exId);
+    };
+
+    window.fecharDrawer = () => {
+      document.getElementById('drawer-overlay').classList.add('hidden');
+      exercicioAtivoId = null;
+      renderListaMobile();
+    };
+
+    window.fecharDrawerClick = (e) => {
+      if (e.target === document.getElementById('drawer-overlay')) fecharDrawer();
+    };
+
+    // ── Timer mobile ────────────────────────────────────
+    function iniciarTimer(seg, proximoNome) {
+      timerTotal = seg; timerRestante = seg; timerPausado = false;
+      document.getElementById('m-timer').classList.add('active');
+      document.getElementById('m-timer-toggle').textContent = 'Pausar';
+      const prox = document.getElementById('m-timer-prox');
+      if (proximoNome) { document.getElementById('m-timer-prox-nome').textContent = proximoNome; prox.style.display = 'block'; }
+      else { prox.style.display = 'none'; }
+      atualizarTimer();
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        if (timerPausado) return;
+        timerRestante--;
+        atualizarTimer();
+        if (timerRestante <= 0) { clearInterval(timerInterval); emitirSom(); setTimeout(() => document.getElementById('m-timer').classList.remove('active'), 1500); }
+      }, 1000);
+    }
+
+    function atualizarTimer() {
+      const m = String(Math.floor(timerRestante/60)).padStart(2,'0');
+      const s = String(timerRestante%60).padStart(2,'0');
+      const el = document.getElementById('m-timer-display');
+      if (!el) return;
+      el.textContent = `${m}:${s}`;
+      el.className = 'm-timer-display' + (timerRestante<=10?' urgente':'');
+      const fill = document.getElementById('m-timer-fill');
+      if (fill) fill.style.width = (timerRestante/timerTotal*100)+'%';
+    }
+
+    window.setTimer = (s) => iniciarTimer(s);
+    window.toggleTimer = () => { timerPausado=!timerPausado; document.getElementById('m-timer-toggle').textContent=timerPausado?'Retomar':'Pausar'; };
+    window.pularTimer = () => { clearInterval(timerInterval); document.getElementById('m-timer').classList.remove('active'); };
+
+    // ══════════════════════════════════════════════════
+    // DESKTOP (simplificado)
+    // ══════════════════════════════════════════════════
+    function iniciarDesktop() {
+      document.getElementById('main-navbar').style.display = '';
+      document.getElementById('etapa-execucao-desktop').style.display = 'block';
+      document.getElementById('d-treino-nome').textContent = fichaAtiva.nome;
+      renderNavDesktop();
+      if (exercicios.length) selecionarExDesktop(0);
+      else {
+        document.getElementById('d-ex-atual').textContent = 'Nenhum exercício ainda';
+        document.getElementById('d-main').innerHTML = `<div style="color:var(--text-3);text-align:center;padding:48px">
+          <p style="margin-bottom:16px">Nenhum exercício adicionado ainda.</p>
+          <button class="btn btn-primary" onclick="abrirModalAddEx()">+ Adicionar exercício</button>
+        </div>`;
+      }
+    }
+
+    function renderNavDesktop() {
+      const navHtml = exercicios.map((ex, i) => {
+        const done = (seriesCache[ex.id]||[]).some(s => s.confirmada);
+        const active = i === exercicioAtualIdxD;
+        return `<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--radius);cursor:pointer;border:1px solid ${active?'var(--orange-dim)':done?'transparent':'transparent'};background:${active?'var(--orange-glow)':done?'transparent':'transparent'}" onclick="selecionarExDesktop(${i})">
+          <div style="width:24px;height:24px;border-radius:6px;background:${done?'var(--green)':active?'var(--orange)':'var(--bg-4)'};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:${done||active?'#fff':'var(--text-3)'}">
+            ${done?'✓':i+1}
+          </div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--text)">${ex.nome}</div>
+            ${ex.grupo_muscular?`<div style="font-size:11px;color:var(--text-3)">${ex.grupo_muscular}</div>`:''}
+          </div>
+        </div>`;
+      }).join('');
+      const btnAddHtml = treinoLivre
+        ? `<button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="abrirModalAddEx()">+ Adicionar exercício</button>` : '';
+      document.getElementById('d-nav').innerHTML = navHtml + btnAddHtml;
+    }
+
+    let exercicioAtualIdxD = 0;
+    window.selecionarExDesktop = async (idx) => {
+      exercicioAtualIdxD = idx;
+      const ex = exercicios[idx];
+      document.getElementById('d-ex-atual').textContent = `${idx+1}/${exercicios.length} — ${ex.nome}`;
+
+      const hist = ex.livre ? [] : await WorkoutSessionService.obterHistoricoExercicio(ex.id, sessaoId, ex.series_padrao*2);
+      const antMap = {};
+      (hist||[]).forEach(s => { if (!antMap[s.serie_num]) antMap[s.serie_num] = s; });
+
+      const series = seriesCache[ex.id];
+      let html = `<div>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px">
+          <div><h2 style="font-size:1.6rem;margin:0">${ex.nome}</h2>${ex.grupo_muscular?`<div style="color:var(--orange);font-size:13px;margin-top:4px">${ex.grupo_muscular}</div>`:''}</div>
+          ${ex.video_url?`<a href="${ex.video_url}" target="_blank" class="btn btn-ghost btn-sm">▶ Ver execução</a>`:''}
+        </div>`;
+
+      if (Object.keys(antMap).length) {
+        html += `<div style="background:var(--bg-3);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:20px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-3);margin-bottom:10px">📊 Última sessão</div>
+          ${Object.values(antMap).slice(0,ex.series_padrao).map(s=>`<div style="display:flex;gap:10px;font-size:13px;color:var(--text-2);padding:4px 0"><span style="color:var(--text-3);width:20px">${s.serie_num}</span><span>${s.carga_kg||'—'} kg</span><span>×</span><span>${s.reps_feitas||'—'} reps</span>${s.rpe?`<span style="color:var(--text-3)">RPE ${s.rpe}</span>`:''}</div>`).join('')}
+        </div>`;
+      }
+
+      html += `<div style="display:grid;grid-template-columns:36px 1fr 1fr 80px 60px 40px;gap:8px;padding:6px 12px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-3)"><div>#</div><div>Tipo</div><div>Carga</div><div>Reps</div><div>RPE</div><div></div></div><div id="d-series-rows">`;
+
+      series.forEach((s, i) => {
+        const dis = s.confirmada ? 'disabled' : '';
+        html += `<div style="display:grid;grid-template-columns:36px 1fr 1fr 80px 60px 40px;gap:8px;align-items:center;padding:8px 12px;background:var(--bg-3);border:1px solid ${s.confirmada?'var(--green)':'var(--border)'};border-radius:var(--radius);margin-bottom:6px">
+          <div style="width:28px;height:28px;border-radius:8px;background:${s.confirmada?'var(--green)':'var(--bg-4)'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${s.confirmada?'#fff':'var(--text-3)'}">${s.is_pr?'🏆':s.num}</div>
+          <select style="background:var(--bg-4);border:1px solid var(--border-2);border-radius:8px;color:var(--text-2);font-size:11px;padding:6px 8px;width:100%;outline:none" ${dis} onchange="updateSerie('${ex.id}',${i},'tipo',this.value)">
+            <option value="normal" ${s.tipo==='normal'?'selected':''}>Normal</option>
+            <option value="warmup" ${s.tipo==='warmup'?'selected':''}>Aquec.</option>
+            <option value="dropset" ${s.tipo==='dropset'?'selected':''}>Drop</option>
+            <option value="falha" ${s.tipo==='falha'?'selected':''}>Falha</option>
+          </select>
+          <input style="background:var(--bg-4);border:1px solid var(--border-2);border-radius:8px;color:var(--text);font-size:15px;font-weight:600;padding:8px 10px;text-align:center;width:100%;outline:none" type="number" step="0.5" min="0" placeholder="kg" value="${s.carga}" ${dis} onchange="updateSerie('${ex.id}',${i},'carga',this.value)" />
+          <input style="background:var(--bg-4);border:1px solid var(--border-2);border-radius:8px;color:var(--text);font-size:15px;font-weight:600;padding:8px 10px;text-align:center;width:100%;outline:none" type="number" min="1" placeholder="reps" value="${s.reps}" ${dis} onchange="updateSerie('${ex.id}',${i},'reps',this.value)" />
+          <select style="background:var(--bg-4);border:1px solid var(--border-2);border-radius:8px;color:var(--text-2);font-size:11px;padding:6px 8px;width:100%;outline:none" ${dis} onchange="updateSerie('${ex.id}',${i},'rpe',this.value)">
+            <option value="">RPE</option>
+            ${[6,7,8,9,10].map(r=>`<option value="${r}" ${s.rpe==r?'selected':''}>${r}</option>`).join('')}
+          </select>
+          <button style="width:36px;height:36px;border-radius:8px;border:none;background:${s.confirmada?'var(--green)':'var(--bg-4)'};color:${s.confirmada?'#fff':'var(--text-3)'};font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center" onclick="confirmarSerieD('${ex.id}',${i})">${s.confirmada?'✓':'○'}</button>
+        </div>`;
+      });
+
+      html += `</div><div style="margin-top:12px"><button class="btn btn-ghost btn-sm" onclick="adicionarSerieD('${ex.id}')">+ Série extra</button></div></div>`;
+      document.getElementById('d-main').innerHTML = html;
+      renderNavDesktop();
+    };
+
+    window.confirmarSerieD = async (exId, idx) => {
+      const s = seriesCache[exId][idx];
+      if (s.confirmada) return;
+      const carga = parseFloat(s.carga)||null, reps = parseInt(s.reps)||null, rpe = parseInt(s.rpe)||null;
+      if (!reps) { showToast('Informe as repetições','erro'); return; }
+      const ex = exercicios.find(e => e.id === exId);
+
+      let resultado;
+      try {
+        resultado = await WorkoutSessionService.registrarSerie({
+          userId: user.id, sessaoId, fichaExercicioId: ex.livre ? null : exId,
+          exerciseId: ex.exercises?.id, exercicioNome: ex.nome,
+          serieNum: s.num, tipo: s.tipo, carga, reps, rpe
+        });
+      } catch (err) {
+        showToast(err.message || 'Erro ao registrar série', 'erro');
+        return;
+      }
+      const { is_pr, one_rm } = resultado;
+
+      if (is_pr) { prsDaSessao.push({exercicio:ex.nome,carga,reps,one_rm}); showToast('🏆 Novo PR!','sucesso'); }
+      if (carga) ex.carga_atual = carga;
+      seriesCache[exId][idx] = {...s, confirmada:true, is_pr, one_rm, db_id:resultado.db_id};
+      selecionarExDesktop(exercicioAtualIdxD);
+      iniciarTimerD(s.descansoOverride || ex.descanso_series_seg || 90);
+    };
+
+    window.adicionarSerieD = (exId) => {
+      const series = seriesCache[exId];
+      series.push({num:series.length+1, carga:series[series.length-1]?.carga||'', reps:'', tipo:'normal', rpe:'', confirmada:false, is_pr:false, one_rm:null, db_id:null});
+      selecionarExDesktop(exercicioAtualIdxD);
+    };
+
+    // Desktop timer
+    let dTimerInt=null, dTimerPaus=false, dTimerT=90, dTimerR=90;
+    function iniciarTimerD(seg) {
+      dTimerT=seg; dTimerR=seg; dTimerPaus=false;
+      document.getElementById('d-timer').style.display='block';
+      document.getElementById('d-timer-toggle').textContent='Pausar';
+      atualizarTimerD();
+      clearInterval(dTimerInt);
+      dTimerInt=setInterval(()=>{ if(dTimerPaus)return; dTimerR--; atualizarTimerD(); if(dTimerR<=0){clearInterval(dTimerInt);emitirSom();setTimeout(()=>document.getElementById('d-timer').style.display='none',1500);}},1000);
+    }
+    function atualizarTimerD() {
+      const m=String(Math.floor(dTimerR/60)).padStart(2,'0'), s=String(dTimerR%60).padStart(2,'0');
+      document.getElementById('d-timer-display').textContent=`${m}:${s}`;
+      document.getElementById('d-timer-bar').style.width=(dTimerR/dTimerT*100)+'%';
+    }
+    window.setTimerD=(s)=>iniciarTimerD(s);
+    window.toggleTimerD=()=>{dTimerPaus=!dTimerPaus;document.getElementById('d-timer-toggle').textContent=dTimerPaus?'Retomar':'Pausar';};
+    window.pularTimerD=()=>{clearInterval(dTimerInt);document.getElementById('d-timer').style.display='none';};
+
+    // ══════════════════════════════════════════════════
+    // FINALIZAR
+    // ══════════════════════════════════════════════════
+    window.confirmarFinalizar = () => {
+      const totalSeries = Object.values(seriesCache).flat().filter(s=>s.confirmada).length;
+      const exConc = exercicios.filter(ex=>(seriesCache[ex.id]||[]).some(s=>s.confirmada)).length;
+      const msg = totalSeries === 0
+        ? 'Nenhuma série registrada. Finalizar mesmo assim?'
+        : exConc < exercicios.length
+          ? `${exConc} de ${exercicios.length} exercícios concluídos. Finalizar mesmo assim?`
+          : null;
+      if (msg && !confirm(msg)) return;
+      finalizarTreino();
+    };
+
+    async function finalizarTreino() {
+      clearInterval(cronometroInterval); clearInterval(timerInterval); clearInterval(dTimerInt);
+      const fim = new Date();
+      const duracaoMin = Math.round((fim-inicioTreino)/60000);
+      await WorkoutSessionService.finalizarSessao(sessaoId, duracaoMin);
+      const todasSeries = Object.values(seriesCache).flat().filter(s=>s.confirmada);
+      const volume = todasSeries.reduce((a,s)=>a+((parseFloat(s.carga)||0)*(parseInt(s.reps)||0)),0);
+      sugestoesCarga = [];
+      for (const ex of exercicios) {
+        const series = (seriesCache[ex.id]||[]).filter(s=>s.confirmada&&s.tipo==='normal');
+        if (!series.length) continue;
+        const todasRPEok = series.every(s=>!s.rpe||parseInt(s.rpe)<=8);
+        const repsAlvo = parseInt(ex.reps_padrao?.split('-')[1]||ex.reps_padrao)||0;
+        const todasRepsOk = series.every(s=>parseInt(s.reps)>=repsAlvo);
+        if (todasRPEok&&todasRepsOk&&series.length>=ex.series_padrao) {
+          const ca=parseFloat(ex.carga_atual||ex.carga_padrao)||0;
+          if(ca>0) sugestoesCarga.push({nome:ex.nome,atual:ca,sugerida:ca+(ex.incremento_kg||2.5)});
+        }
+      }
+      if (isMobile) mostrarResumoMobile(duracaoMin, todasSeries.length, volume);
+      else mostrarResumoDesktop(duracaoMin, todasSeries.length, volume);
+    }
+
+    function mostrarResumoMobile(dur, series, volume) {
+      document.getElementById('mobile-treino').style.display='none';
+      document.getElementById('m-timer').classList.remove('active');
+      document.getElementById('drawer-overlay').classList.add('hidden');
+      document.getElementById('m-resumo').style.display='block';
+      document.getElementById('m-resumo-ficha').textContent=fichaAtiva.nome;
+      document.getElementById('m-resumo-duracao').textContent=dur;
+      document.getElementById('m-resumo-series').textContent=series;
+      document.getElementById('m-resumo-volume').textContent=Math.round(volume).toLocaleString('pt-BR');
+      renderPRs('m-resumo-prs'); renderProg('m-resumo-prog');
+    }
+
+    function mostrarResumoDesktop(dur, series, volume) {
+      document.getElementById('etapa-execucao-desktop').style.display='none';
+      document.getElementById('etapa-resumo-desktop').style.display='block';
+      document.getElementById('d-resumo-ficha').textContent=fichaAtiva.nome;
+      document.getElementById('d-resumo-duracao').textContent=dur;
+      document.getElementById('d-resumo-series').textContent=series;
+      document.getElementById('d-resumo-volume').textContent=Math.round(volume).toLocaleString('pt-BR')+' kg';
+      renderPRs('d-resumo-prs'); renderProg('d-resumo-prog');
+    }
+
+    function renderPRs(id) {
+      if (!prsDaSessao.length) return;
+      document.getElementById(id).innerHTML=`<h3 style="margin-bottom:12px">🏆 Recordes desta sessão</h3>${prsDaSessao.map(pr=>`<div class="pr-item"><span style="font-size:20px">🏆</span><div><div style="font-weight:600">${pr.exercicio}</div><div style="font-size:13px;color:var(--text-2)">${pr.carga?pr.carga+' kg × '+pr.reps+' reps':'—'}${pr.one_rm?' — 1RM: '+pr.one_rm+' kg':''}</div></div></div>`).join('')}`;
+    }
+
+    function renderProg(id) {
+      if (!sugestoesCarga.length) return;
+      document.getElementById(id).innerHTML=`<div class="progressao-sugestao"><div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:10px">📈 Sugestão para o próximo treino</div>${sugestoesCarga.map(s=>`<div style="font-size:13px;color:var(--text-2);padding:4px 0"><strong>${s.nome}</strong>: ${s.atual} kg → <span style="color:var(--green);font-weight:700">${s.sugerida} kg</span></div>`).join('')}</div>`;
+    }
+
+    window.confirmarAbandonar = () => {
+      if (confirm('Abandonar o treino?')) {
+        clearInterval(cronometroInterval); clearInterval(timerInterval); clearInterval(dTimerInt);
+        window.location.href = '/dashboard.html';
+      }
+    };
+
+    function emitirSom() {
+      try { const ctx=new AudioContext(),osc=ctx.createOscillator(),gain=ctx.createGain(); osc.connect(gain);gain.connect(ctx.destination); osc.frequency.value=880; osc.start();gain.gain.setValueAtTime(0.3,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.5);osc.stop(ctx.currentTime+0.5); }catch(e){}
+    }
+
+    window.sair = async () => { await supabase.auth.signOut(); window.location.href='/index.html'; };
+  </script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
+    }
+  </script>
+</body>
+</html>

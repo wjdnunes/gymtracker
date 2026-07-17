@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#f97316" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+  <title>GymTracker — Histórico</title>
+  <link rel="stylesheet" href="css/global.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    .content { padding: 32px 0 64px; }
+
+    /* Stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+    }
+
+    .stat-card .s-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-3);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .stat-card .s-val {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .stat-card .s-val.orange { color: var(--orange); }
+
+    .stat-card .s-delta {
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .s-delta.up { color: var(--green); }
+    .s-delta.neutral { color: var(--text-3); }
+
+    /* Layout principal */
+
+
+    /* Card base */
+    .card {
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-3);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-title span { color: var(--text-3); font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 11px; }
+
+    /* Heatmap */
+    .heatmap-wrap { overflow-x: auto; }
+    .heatmap-months { display: flex; gap: 3px; margin-bottom: 4px; }
+    .heatmap-month-label { font-size: 10px; color: var(--text-3); flex: 1; }
+    .heatmap { display: grid; grid-template-columns: repeat(15, 1fr); gap: 3px; }
+    .heat-cell { aspect-ratio: 1; border-radius: 3px; background: var(--bg-3); cursor: default; transition: opacity .1s; }
+    .heat-cell:hover { opacity: 0.8; }
+    .heat-cell.l1 { background: rgba(249,115,22,0.2); }
+    .heat-cell.l2 { background: rgba(249,115,22,0.45); }
+    .heat-cell.l3 { background: rgba(249,115,22,0.7); }
+    .heat-cell.l4 { background: var(--orange); }
+    .heat-legend { display: flex; align-items: center; gap: 5px; margin-top: 8px; }
+    .heat-legend span { font-size: 10px; color: var(--text-3); }
+    .heat-sq { width: 10px; height: 10px; border-radius: 2px; }
+
+    /* Gráfico */
+    .chart-container { position: relative; height: 180px; }
+    .chart-container-sm { position: relative; height: 130px; }
+
+    .chart-legend { display: flex; gap: 14px; margin-bottom: 10px; }
+    .leg-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-2); }
+    .leg-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+    /* PRs */
+    .pr-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    @media (max-width: 768px) {
+      .content { padding: 20px 0 48px; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .pr-list { grid-template-columns: 1fr; }
+      .resumo-2col { grid-template-columns: 1fr !important; }
+    }
+
+    .pr-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--bg-3);
+      border-radius: var(--radius);
+      min-width: 0;
+    }
+
+    .pr-medal {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; flex-shrink: 0;
+    }
+    .pr-medal.ouro { background: rgba(234,179,8,0.15); color: var(--yellow); }
+    .pr-medal.prata { background: rgba(160,160,160,0.15); color: #a0a0a0; }
+    .pr-medal.bronze { background: rgba(180,100,50,0.15); color: #b46432; }
+
+    .pr-info { flex: 1; min-width: 0; }
+    .pr-nome { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pr-val { font-size: 11px; color: var(--text-2); margin-top: 1px; }
+    .pr-1rm { font-size: 11px; font-weight: 600; color: var(--green); margin-left: auto; white-space: nowrap; flex-shrink: 0; }
+
+    /* Sessões */
+    .sessao-item {
+      display: flex;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+    .sessao-item:hover { opacity: .8; }
+    .sessao-item:last-child { border-bottom: none; }
+
+    .sessao-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--border-2); margin-top: 5px; flex-shrink: 0;
+    }
+    .sessao-dot.pr { background: var(--yellow); }
+    .sessao-dot.ok { background: var(--orange); }
+
+    .sessao-nome { font-size: 13px; font-weight: 600; color: var(--text); }
+    .sessao-data { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+    .sessao-tags { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+
+    .stag {
+      font-size: 11px; padding: 2px 8px; border-radius: 999px;
+      background: var(--bg-3); color: var(--text-2); border: 1px solid var(--border);
+    }
+    .stag.pr { background: rgba(234,179,8,0.1); color: var(--yellow); border-color: rgba(234,179,8,0.2); }
+
+    /* Modal sessão */
+    .serie-detalhe {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 12px; background: var(--bg-3);
+      border-radius: var(--radius); margin-bottom: 6px; font-size: 13px;
+    }
+    .snum { width: 24px; height: 24px; border-radius: 6px; background: var(--bg-4); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--text-3); flex-shrink: 0; }
+    .snum.pr { background: var(--yellow); color: #000; }
+    .sec-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text-3); margin: 14px 0 8px; }
+
+    /* Select */
+    .ex-select-wrap select {
+      font-size: 12px; padding: 5px 10px;
+      border: 1px solid var(--border-2); border-radius: 8px;
+      background: var(--bg-3); color: var(--text-2);
+      outline: none; cursor: pointer;
+    }
+
+    /* Alertas */
+    .alertas-box { margin-bottom: 20px; }
+    .alerta {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 12px 16px; border-radius: var(--radius); margin-bottom: 8px;
+    }
+    .alerta.estagnacao { background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.15); }
+    .alerta.progressao { background: rgba(34,197,94,0.06); border: 1px solid rgba(34,197,94,0.15); }
+    .alerta .a-titulo { font-weight: 600; font-size: 13px; color: var(--text); }
+    .alerta .a-sub { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar">
+    <a class="navbar-brand" href="/dashboard.html">Gym<span>Tracker</span></a>
+    <div class="navbar-nav">
+      <a href="/dashboard.html">Início</a>
+      <a href="/biblioteca.html">Biblioteca</a>
+      <a href="/fichas.html">Fichas</a>
+      <a href="/treino.html">Treinar</a>
+      <a href="/historico.html" class="active">Histórico</a>
+      <a href="/relatorio.html">Relatório</a>
+      <a href="/perfil.html">Perfil</a>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="sair()">Sair</button>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="content">
+
+      <div class="page-header">
+        <h1>Histórico & Evolução</h1>
+        <p>Sua progressão, recordes e frequência de treino</p>
+      </div>
+
+      <!-- Alertas inteligentes -->
+      <div id="alertas-box" class="alertas-box" style="display:none">
+        <div id="alertas-lista"></div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="s-label">📅 Esta semana</div>
+          <div class="s-val orange" id="stat-semana">—</div>
+          <div class="s-delta neutral" id="stat-semana-delta">sessões</div>
+        </div>
+        <div class="stat-card">
+          <div class="s-label">🏋️ Total de treinos</div>
+          <div class="s-val" id="stat-total">—</div>
+          <div class="s-delta neutral">sessões concluídas</div>
+        </div>
+        <div class="stat-card">
+          <div class="s-label">⚡ Volume total</div>
+          <div class="s-val" id="stat-volume">—</div>
+          <div class="s-delta up" id="stat-volume-delta"></div>
+        </div>
+        <div class="stat-card">
+          <div class="s-label">🏆 Recordes pessoais</div>
+          <div class="s-val" id="stat-prs">—</div>
+          <div class="s-delta neutral" id="stat-prs-delta">PRs registrados</div>
+        </div>
+      </div>
+
+      <!-- Linha 1: Heatmap + Volume -->
+      <div class="resumo-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+        <div class="card">
+          <div class="card-title">Frequência de treinos <span>últimos 15 dias</span></div>
+          <div class="heatmap" id="heatmap"></div>
+          <div class="heat-legend">
+            <span>Menos</span>
+            <div class="heat-sq" style="background:var(--bg-3);border:1px solid var(--border)"></div>
+            <div class="heat-sq" style="background:rgba(249,115,22,0.2)"></div>
+            <div class="heat-sq" style="background:rgba(249,115,22,0.5)"></div>
+            <div class="heat-sq" style="background:var(--orange)"></div>
+            <span>Mais</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Volume por dia (kg) <span>esta semana</span></div>
+          <div class="chart-container-sm">
+            <canvas id="volChart" role="img" aria-label="Volume de treino em kg por dia da semana">Carregando...</canvas>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Linha 2: Evolução + Sessões -->
+      <div class="resumo-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+        <div class="card">
+          <div class="card-title">
+            Evolução de carga
+            <div class="ex-select-wrap">
+              <select id="ex-select" onchange="carregarEvolucao()">
+                <option value="">Selecione um exercício...</option>
+              </select>
+            </div>
+          </div>
+          <div id="evolucao-content">
+            <div style="color:var(--text-3);text-align:center;padding:32px;font-size:13px">Selecione um exercício</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Últimas sessões</div>
+          <div id="sessoes-lista">
+            <div style="color:var(--text-3);text-align:center;padding:32px">Carregando...</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Linha 3: PRs em grid 2 colunas -->
+      <div class="card">
+        <div class="card-title">Recordes pessoais</div>
+        <div class="pr-list" id="prs-lista">
+          <div style="color:var(--text-3);text-align:center;padding:32px">Carregando...</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal sessão -->
+  <div class="modal-overlay" id="modal-sessao">
+    <div class="modal" style="max-width:600px">
+      <div class="modal-header">
+        <div>
+          <h3 id="ms-nome">—</h3>
+          <div id="ms-data" style="font-size:13px;color:var(--text-2);margin-top:2px"></div>
+        </div>
+        <button class="modal-close" onclick="fecharModal()">✕</button>
+      </div>
+      <div id="ms-body"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase, requireAuth, showToast } from './js/supabase.js';
+    import { StatisticsEngine } from './js/StatisticsEngine.js';
+
+    const user = await requireAuth();
+    if (!user) { window.location.href = '/index.html'; throw new Error('unauth'); }
+
+    let chartEvolucao = null;
+    let chartVol = null;
+
+    // Detecção de dark mode para Charts
+    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+      || document.documentElement.classList.contains('dark');
+    const gridColor = isDark ? '#323232' : '#e5e5e5';
+    const tickColor = isDark ? '#606060' : '#888';
+
+    // ── Init ───────────────────────────────────────────
+    async function init() {
+      const [resumo, sessoes, prs, exercicios, alertas] = await Promise.all([
+        StatisticsEngine.resumoGeral(user.id),
+        StatisticsEngine.listarSessoes(user.id, 10),
+        StatisticsEngine.listarPRs(user.id),
+        StatisticsEngine.exerciciosTreinados(user.id),
+        StatisticsEngine.alertas(user.id)
+      ]);
+
+      renderStats(resumo);
+      renderHeatmap(sessoes);
+      renderVolumeSemanal(sessoes);
+      renderPRs(prs);
+      renderSessoes(sessoes);
+      renderAlertas(alertas);
+      popularSelectExercicios(exercicios);
+    }
+
+    // ── Stats ──────────────────────────────────────────
+    function renderStats(r) {
+      document.getElementById('stat-semana').textContent = r.semanal;
+      document.getElementById('stat-total').textContent = r.totalSessoes;
+      document.getElementById('stat-prs').textContent = r.totalPRs;
+      const vol = r.volumeTotal.toLocaleString('pt-BR');
+      document.getElementById('stat-volume').textContent = vol + ' kg';
+    }
+
+    // ── Heatmap ────────────────────────────────────────
+    function renderHeatmap(sessoes) {
+      const hm = document.getElementById('heatmap');
+      const hoje = new Date();
+      const contagem = {};
+      sessoes.forEach(s => {
+        const d = new Date(s.iniciado_em).toDateString();
+        contagem[d] = (contagem[d] || 0) + 1;
+      });
+
+      for (let i = 14; i >= 0; i--) {
+        const d = new Date(hoje);
+        d.setDate(d.getDate() - i);
+        const key = d.toDateString();
+        const n = contagem[key] || 0;
+        const cell = document.createElement('div');
+        const lvl = n === 0 ? '' : n === 1 ? 'l1' : n === 2 ? 'l2' : n <= 4 ? 'l3' : 'l4';
+        cell.className = 'heat-cell' + (lvl ? ' '+lvl : '');
+        cell.title = d.toLocaleDateString('pt-BR', { day:'numeric', month:'short' }) + (n ? ' — '+n+' treino(s)' : ' — Sem treino');
+        hm.appendChild(cell);
+      }
+    }
+
+    // ── Volume semanal ─────────────────────────────────
+    function renderVolumeSemanal(sessoes) {
+      const dias = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+      const volumes = [0,0,0,0,0,0,0];
+      const hoje = new Date();
+      const semanaInicio = new Date(hoje);
+      semanaInicio.setDate(hoje.getDate() - hoje.getDay());
+      semanaInicio.setHours(0,0,0,0);
+
+      sessoes.forEach(s => {
+        const d = new Date(s.iniciado_em);
+        if (d >= semanaInicio) {
+          volumes[d.getDay()] += s.volume || 0;
+        }
+      });
+
+      if (chartVol) chartVol.destroy();
+      chartVol = new Chart(document.getElementById('volChart'), {
+        type: 'bar',
+        data: {
+          labels: dias,
+          datasets: [{
+            data: volumes,
+            backgroundColor: volumes.map((v, i) => i === new Date().getDay() ? '#f97316' : 'rgba(249,115,22,0.4)'),
+            borderRadius: 4,
+            borderSkipped: false
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: ctx => Math.round(ctx.parsed.y).toLocaleString('pt-BR') + ' kg' } }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: tickColor, font: { size: 11 } }, border: { color: gridColor } },
+            y: { grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 11 }, callback: v => v >= 1000 ? (v/1000).toFixed(1)+'k' : v }, border: { display: false } }
+          }
+        }
+      });
+    }
+
+    // ── PRs ────────────────────────────────────────────
+    function renderPRs(prs) {
+      const el = document.getElementById('prs-lista');
+      if (!prs.length) {
+        el.innerHTML = `<div style="color:var(--text-3);text-align:center;padding:32px;font-size:13px">Nenhum PR ainda. Treine para registrar!</div>`;
+        return;
+      }
+
+      const medalhas = ['ouro','ouro','ouro','prata','prata','prata','bronze','bronze','bronze'];
+      const icons = ['🥇','🥈','🥉'];
+
+      el.innerHTML = prs.slice(0, 8).map((pr, i) => {
+        const data = new Date(pr.batido_em).toLocaleDateString('pt-BR', { day:'numeric', month:'short' });
+        const medalha = medalhas[i] || 'bronze';
+        const icon = i < 3 ? icons[i] : '🏆';
+        return `
+          <div class="pr-item">
+            <div class="pr-medal ${medalha}">${icon}</div>
+            <div class="pr-info">
+              <div class="pr-nome">${pr.exercicio_nome}</div>
+              <div class="pr-val">${pr.melhor_carga_kg ? pr.melhor_carga_kg+' kg × '+pr.melhor_reps+' reps' : pr.melhor_reps+' reps'} · ${data}</div>
+            </div>
+            ${pr.melhor_one_rm ? `<div class="pr-1rm">1RM ${pr.melhor_one_rm} kg</div>` : ''}
+          </div>`;
+      }).join('');
+    }
+
+    // ── Sessões ────────────────────────────────────────
+    function renderSessoes(sessoes) {
+      const el = document.getElementById('sessoes-lista');
+      if (!sessoes.length) {
+        el.innerHTML = `<div class="empty-state"><div class="icon">🏋️</div><p>Nenhuma sessão ainda.</p><a href="/treino.html" class="btn btn-primary">Iniciar treino</a></div>`;
+        return;
+      }
+
+      el.innerHTML = sessoes.slice(0, 6).map(s => {
+        const data = new Date(s.iniciado_em).toLocaleDateString('pt-BR', { weekday:'short', day:'numeric', month:'short' });
+        const dur = s.duracao_min ? s.duracao_min+' min' : '—';
+        const temPR = s.prs > 0;
+        const dotCls = temPR ? 'pr' : s.total_series > 0 ? 'ok' : '';
+        return `
+          <div class="sessao-item" onclick="verSessao('${s.id}')">
+            <div class="sessao-dot ${dotCls}"></div>
+            <div style="flex:1">
+              <div class="sessao-nome">${s.ficha_nome || 'Treino livre'}</div>
+              <div class="sessao-data">${data} · ${dur}</div>
+              <div class="sessao-tags">
+                <span class="stag">${s.total_series} série${s.total_series !== 1 ? 's' : ''}</span>
+                <span class="stag">${(s.volume||0).toLocaleString('pt-BR')} kg</span>
+                ${temPR ? `<span class="stag pr">🏆 ${s.prs} PR${s.prs > 1 ? 's' : ''}</span>` : ''}
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    // ── Alertas ────────────────────────────────────────
+    function renderAlertas(alertas) {
+      if (!alertas.length) return;
+      document.getElementById('alertas-box').style.display = 'block';
+      document.getElementById('alertas-lista').innerHTML = alertas.map(a => `
+        <div class="alerta ${a.tipo}">
+          <div style="font-size:18px">${a.tipo === 'estagnacao' ? '⚠️' : '📈'}</div>
+          <div>
+            <div class="a-titulo">${a.exercicio}</div>
+            <div class="a-sub">${a.mensagem}${a.cargaAtual ? ' — carga atual: '+a.cargaAtual+' kg' : ''}</div>
+          </div>
+        </div>`).join('');
+    }
+
+    // ── Select exercícios ──────────────────────────────
+    function popularSelectExercicios(exercicios) {
+      const sel = document.getElementById('ex-select');
+      exercicios.forEach(nome => sel.innerHTML += `<option value="${nome}">${nome}</option>`);
+    }
+
+    // ── Evolução ───────────────────────────────────────
+    window.carregarEvolucao = async () => {
+      const nome = document.getElementById('ex-select').value;
+      const el = document.getElementById('evolucao-content');
+      if (!nome) {
+        el.innerHTML = `<div style="color:var(--text-3);text-align:center;padding:32px;font-size:13px">Selecione um exercício</div>`;
+        return;
+      }
+
+      el.innerHTML = `<div style="color:var(--text-3);text-align:center;padding:32px;font-size:13px">Carregando...</div>`;
+      const ev = await StatisticsEngine.evolucaoExercicio(nome);
+
+      if (!ev || ev.historico.length < 1) {
+        el.innerHTML = `<div style="color:var(--text-3);text-align:center;padding:32px;font-size:13px">Treine mais vezes para ver a evolução!</div>`;
+        return;
+      }
+
+      const evolPct = ev.evolucaoPct;
+      const evolColor = evolPct > 0 ? 'var(--green)' : evolPct < 0 ? 'var(--red)' : 'var(--text-3)';
+
+      el.innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
+          <div style="background:var(--bg-3);border-radius:var(--radius);padding:10px;text-align:center">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);margin-bottom:4px">Inicial</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:1.3rem;font-weight:700;color:var(--text-2)">${ev.cargaInicial || '—'} kg</div>
+          </div>
+          <div style="background:var(--bg-3);border-radius:var(--radius);padding:10px;text-align:center">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);margin-bottom:4px">Atual</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:1.3rem;font-weight:700;color:var(--orange)">${ev.cargaAtual || '—'} kg</div>
+          </div>
+          <div style="background:var(--bg-3);border-radius:var(--radius);padding:10px;text-align:center">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);margin-bottom:4px">Evolução</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:1.3rem;font-weight:700;color:${evolColor}">${evolPct > 0 ? '+' : ''}${evolPct}%</div>
+          </div>
+        </div>
+        <div class="chart-legend">
+          <div class="leg-item"><div class="leg-dot" style="background:#f97316"></div>Carga (kg)</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#eab308;border-radius:50%"></div>1RM estimado</div>
+        </div>
+        <div class="chart-container">
+          <canvas id="chart-ev" role="img" aria-label="Evolução de carga de ${nome}">Carga ao longo do tempo.</canvas>
+        </div>`;
+
+      if (chartEvolucao) chartEvolucao.destroy();
+
+      const labels = ev.historico.map(h => new Date(h.data).toLocaleDateString('pt-BR', { day:'numeric', month:'short' }));
+      const cargas = ev.historico.map(h => h.carga || null);
+      const oneRMs = ev.historico.map(h => h.one_rm ? Math.round(h.one_rm * 10)/10 : null);
+
+      chartEvolucao = new Chart(document.getElementById('chart-ev'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Carga (kg)',
+              data: cargas,
+              borderColor: '#f97316',
+              backgroundColor: 'rgba(249,115,22,0.08)',
+              borderWidth: 2,
+              pointBackgroundColor: '#f97316',
+              pointRadius: 5,
+              tension: 0.3,
+              fill: true
+            },
+            {
+              label: '1RM estimado',
+              data: oneRMs,
+              borderColor: '#eab308',
+              backgroundColor: 'transparent',
+              borderWidth: 2,
+              pointBackgroundColor: '#eab308',
+              pointRadius: 3,
+              borderDash: [4, 4],
+              tension: 0.3
+            }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { backgroundColor: '#262626', borderColor: '#323232', borderWidth: 1, titleColor: '#f0f0f0', bodyColor: '#a0a0a0' }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: tickColor, font: { size: 11 } }, border: { color: gridColor } },
+            y: { grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 11 } }, border: { display: false } }
+          }
+        }
+      });
+    };
+
+    // ── Detalhe sessão ─────────────────────────────────
+    window.verSessao = async (id) => {
+      const { data: sessao } = await supabase.from('sessoes').select('*').eq('id', id).maybeSingle();
+      if (!sessao) {
+        showToast('Sessão não encontrada — pode ter sido removida.', 'erro');
+        return;
+      }
+      const { data: series } = await supabase.from('series_executadas').select('*').eq('sessao_id', id).order('exercicio_nome, serie_num');
+
+      document.getElementById('ms-nome').textContent = sessao?.ficha_nome || 'Treino';
+      const dataStr = new Date(sessao?.iniciado_em).toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+      document.getElementById('ms-data').textContent = `${dataStr} · ${sessao?.duracao_min || '—'} min`;
+
+      const porEx = {};
+      (series || []).forEach(s => {
+        if (!porEx[s.exercicio_nome]) porEx[s.exercicio_nome] = [];
+        porEx[s.exercicio_nome].push(s);
+      });
+
+      let html = '';
+      const tipos = { normal:'', warmup:'🔥 Aquec.', dropset:'⬇️ Drop', falha:'💀 Falha' };
+      Object.entries(porEx).forEach(([nome, series]) => {
+        html += `<div class="sec-title">${nome}</div>`;
+        series.forEach(s => {
+          html += `
+            <div class="serie-detalhe">
+              <div class="snum ${s.is_pr ? 'pr' : ''}">${s.is_pr ? '🏆' : s.serie_num}</div>
+              ${s.tipo && s.tipo !== 'normal' ? `<span style="font-size:12px;color:var(--text-3)">${tipos[s.tipo]||''}</span>` : ''}
+              <span>${s.carga_kg ? s.carga_kg+' kg' : '—'}</span>
+              <span style="color:var(--text-3)">×</span>
+              <span>${s.reps_feitas || '—'} reps</span>
+              ${s.rpe ? `<span style="font-size:12px;color:var(--text-3)">RPE ${s.rpe}</span>` : ''}
+              ${s.one_rm ? `<span style="font-size:12px;color:var(--orange);margin-left:auto">1RM: ${s.one_rm} kg</span>` : ''}
+            </div>`;
+        });
+      });
+
+      document.getElementById('ms-body').innerHTML = html || '<div style="color:var(--text-3);padding:16px">Nenhuma série registrada.</div>';
+      document.getElementById('modal-sessao').classList.add('open');
+    };
+
+    window.fecharModal = () => document.getElementById('modal-sessao').classList.remove('open');
+    document.getElementById('modal-sessao').addEventListener('click', e => { if (e.target === document.getElementById('modal-sessao')) fecharModal(); });
+
+    window.sair = async () => { await supabase.auth.signOut(); window.location.href = '/index.html'; };
+
+    await init();
+  </script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
+    }
+  </script>
+</body>
+</html>

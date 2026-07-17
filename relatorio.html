@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Relatório de Evolução — GymTracker</title>
+<link rel="stylesheet" href="css/global.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  /*
+    Reaproveita tudo que já existe em global.css. Aqui só entra o
+    que é exclusivo desta página.
+  */
+
+  .btn-voltar-dash {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-2);
+    border-radius: var(--radius);
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    text-decoration: none;
+    flex-shrink: 0;
+    font-size: 17px;
+    transition: all .15s;
+  }
+  .btn-voltar-dash:hover { background: var(--bg-2); color: var(--text); }
+
+  .page-header-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  /* Período — texto simples com um estado ativo, sem pílulas pesadas */
+  .period-bar {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+  }
+  .period-btn {
+    background: none;
+    border: none;
+    color: var(--text-3);
+    padding: 6px 12px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color .15s;
+    font-family: 'Inter', sans-serif;
+  }
+  .period-btn:hover { color: var(--text-2); }
+  .period-btn.active { color: var(--orange); font-weight: 600; }
+
+  /* Toggle Modo pessoal / Modo profissional */
+  .mode-toggle {
+    display: inline-flex;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 3px;
+    margin-bottom: 36px;
+  }
+  .mode-toggle button {
+    border: none;
+    background: none;
+    padding: 7px 16px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-2);
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+  }
+  .mode-toggle button.active { background: var(--orange); color: #fff; }
+
+  .rel-section { margin-bottom: 44px; }
+
+  .rel-section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 16px;
+  }
+
+  /* ── Resumo pessoal: card bold + cards horizontais + sequência ─── */
+  .hero-card {
+    background: linear-gradient(180deg, var(--orange), #ea6a0a);
+    border-radius: var(--radius-lg);
+    padding: 28px 24px;
+    margin-bottom: 16px;
+  }
+  .hero-card-label {
+    font-size: 12px; font-weight: 700; color: rgba(26,13,0,0.75);
+    text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px;
+  }
+  .hero-card-numero {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 76px; font-weight: 700; line-height: 0.9; color: #1a0d00;
+  }
+  .hero-card-simples .hero-card-numero { font-size: 60px; }
+  .hero-card-status { font-size: 15px; font-weight: 600; color: #3d1c00; margin-top: 4px; }
+  .hero-card-sub { font-size: 12px; color: rgba(61,28,0,0.85); margin-top: 10px; }
+
+  .stat-scroll {
+    display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 28px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .stat-chip {
+    flex: 0 0 auto; background: var(--bg-2); border-radius: 14px;
+    padding: 16px; min-width: 110px;
+  }
+  .stat-chip-valor {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 30px; font-weight: 700; color: var(--text); line-height: 1;
+  }
+  .stat-chip-valor.up { color: var(--green); }
+  .stat-chip-valor.down { color: var(--red); }
+  .stat-chip-valor.neutral { color: var(--text-3); }
+  .stat-chip-unit { font-size: 16px; color: var(--text-3); }
+  .stat-chip-label { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+
+  .streak-section { margin-bottom: 8px; }
+  .streak-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .streak-title { font-size: 12px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; }
+  .streak-dias { font-family: 'Barlow Condensed', sans-serif; font-size: 17px; font-weight: 700; color: var(--orange); }
+  .streak-dots { display: flex; gap: 4px; flex-wrap: wrap; }
+  .streak-dot { width: 18px; height: 18px; border-radius: 50%; background: var(--orange); }
+  .streak-dot.next { background: var(--bg-2); border: 1.5px dashed var(--orange); }
+  .streak-bar-wrap { display: flex; align-items: center; gap: 10px; }
+  .streak-bar-track { flex: 1; height: 10px; border-radius: 5px; background: var(--bg-2); padding: 1px; }
+  .streak-bar-fill { height: 100%; width: 100%; background: var(--orange); border-radius: 4px; }
+  .streak-bar-label {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 700;
+    color: var(--text); white-space: nowrap;
+  }
+
+
+  /* ── Frequência (heatmap) ────────────────────────────────────── */
+  .heatmap {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 11px);
+    grid-auto-flow: column;
+    grid-template-rows: repeat(7, 11px);
+    gap: 3px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    margin-top: 16px;
+  }
+  .heatmap-day { width: 11px; height: 11px; border-radius: 2px; background: var(--bg-2); }
+  .heatmap-day.treino { background: var(--orange); }
+
+  /* ── Performance (modo pessoal): lista limpa ─────────────────── */
+  .exercicio-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 0; border-bottom: 1px solid var(--border);
+  }
+  .exercicio-row:last-child { border-bottom: none; }
+  .exercicio-nome-wrap { display: flex; align-items: center; gap: 8px; }
+  .exercicio-nome { font-size: 15px; font-weight: 600; color: var(--text); }
+  .exercicio-trofeu { font-size: 13px; }
+  .exercicio-sub { font-size: 12px; color: var(--text-3); margin-top: 3px; }
+  .exercicio-principal { text-align: right; }
+  .exercicio-carga {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 20px; font-weight: 700; color: var(--text);
+  }
+  .exercicio-delta { font-size: 12px; font-weight: 600; margin-top: 2px; }
+  .exercicio-delta.up { color: var(--green); }
+  .exercicio-delta.down { color: var(--red); }
+  .exercicio-delta.neutral { color: var(--text-3); }
+
+  .ver-mais-btn {
+    background: none; border: none; color: var(--text-2);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    padding: 14px 0 0; font-family: 'Inter', sans-serif;
+  }
+  .ver-mais-btn:hover { color: var(--orange); }
+
+  /* ── Recordes ─────────────────────────────────────────────── */
+  .recorde-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 0; border-bottom: 1px solid var(--border);
+  }
+  .recorde-row:last-child { border-bottom: none; }
+  .recorde-nome { font-size: 14px; font-weight: 600; color: var(--text); }
+  .recorde-data { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+  .recorde-valor {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px; font-weight: 700; color: var(--orange);
+  }
+
+  .rel-loading { text-align: center; padding: 80px 16px; color: var(--text-3); font-size: 14px; }
+
+  /* ── Volume por grupamento (5 baldes) ─────────────────────────── */
+  .volume-grupo-row { display: grid; grid-template-columns: 70px 1fr 70px; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .volume-grupo-label { font-size: 12px; color: var(--text-2); }
+  .volume-grupo-track { background: var(--bg-2); border-radius: 5px; height: 10px; overflow: hidden; }
+  .volume-grupo-fill { background: var(--orange); height: 100%; border-radius: 5px; transition: width .3s; }
+  .volume-grupo-valor { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; color: var(--text-2); text-align: right; }
+
+  /* ── RPE (número, com destaque quando > 9) ────────────────────── */
+  .rpe-tag { font-size: 11px; color: var(--text-3); }
+  .rpe-tag.rpe-alto { color: var(--red); font-weight: 700; }
+
+  /* ── Diretrizes para o próximo ciclo ──────────────────────────── */
+  .diretrizes-card { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; }
+  .diretriz-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text-2); line-height: 1.5; }
+  .diretriz-item:last-child { border-bottom: none; }
+  .diretriz-icone { flex-shrink: 0; font-size: 15px; }
+
+  /* ── Modo profissional ───────────────────────────────────────── */
+  .sobrecarga-card { display: flex; justify-content: space-between; align-items: center; }
+  .sobrecarga-card.status-normal { background: var(--bg-2); border-color: var(--border); }
+  .sobrecarga-card.status-elevado { background: rgba(234,179,8,0.08); border: 1px solid rgba(234,179,8,0.3); }
+  .sobrecarga-card.status-alto { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.3); }
+  .sobrecarga-valor { font-family: 'Barlow Condensed', sans-serif; font-size: 30px; font-weight: 700; }
+  .sobrecarga-valor.status-normal { color: var(--text); }
+  .sobrecarga-valor.status-elevado { color: var(--yellow); }
+  .sobrecarga-valor.status-alto { color: var(--red); }
+
+  .atencao-card { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.3); }
+  .atencao-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; }
+  .atencao-item:not(:last-child) { border-bottom: 1px solid rgba(239,68,68,0.15); }
+
+  .pe-row { padding: 14px 0; border-bottom: 1px solid var(--border); }
+  .pe-row:last-child { border-bottom: none; }
+  .pe-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .pe-nome { font-size: 14px; font-weight: 600; color: var(--text); }
+  .pe-body { display: flex; justify-content: space-between; align-items: flex-end; }
+  .pe-col { font-size: 12px; }
+  .pe-label { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
+  .pe-planejado { color: var(--text-2); }
+  .pe-executado { color: var(--text); font-weight: 600; }
+  .spark { display: flex; gap: 3px; align-items: flex-end; height: 22px; }
+  .spark div { width: 5px; border-radius: 1px; background: var(--text-3); }
+  .spark div:last-child { background: var(--orange); }
+  .sinal-progrediu { color: var(--green); }
+  .sinal-fadiga { color: var(--yellow); }
+  .sinal-estavel { color: var(--text-3); }
+
+  .diagrama-card { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+  .diagrama-card .diagramas-svgs { display: flex; gap: 12px; flex-shrink: 0; }
+  .diagrama-card svg { width: 78px; height: auto; }
+  .legenda-lista { flex: 1; min-width: 160px; }
+  .legenda-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-2); margin-bottom: 7px; }
+  .legenda-dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+
+  .footer-actions { margin-top: 8px; }
+
+  @media (max-width: 768px) {
+    .hero-stat-value { font-size: 44px; }
+    .secondary-stats { gap: 24px; }
+    .exercicio-carga { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-wrapper">
+
+  <div class="page-header">
+    <div class="page-header-row">
+      <a href="dashboard.html" class="btn-voltar-dash" aria-label="Voltar ao dashboard">←</a>
+      <h1 style="font-size: 1.7rem;">Relatório de Evolução</h1>
+    </div>
+  </div>
+
+  <div class="period-bar" id="periodBar">
+    <button class="period-btn" data-dias="7">7 dias</button>
+    <button class="period-btn active" data-dias="30">30 dias</button>
+    <button class="period-btn" data-dias="90">90 dias</button>
+    <button class="period-btn" data-dias="365">1 ano</button>
+  </div>
+
+  <div class="mode-toggle" id="modeToggle">
+    <button class="active" data-modo="pessoal">Modo pessoal</button>
+    <button data-modo="profissional">Modo profissional</button>
+  </div>
+
+  <div id="relatorioConteudo">
+    <div class="rel-loading">Carregando relatório…</div>
+  </div>
+
+  <div class="footer-actions" id="footerActions" style="display:none;">
+    <button class="btn btn-primary btn-full" id="exportarPdfBtn">Exportar PDF</button>
+  </div>
+
+</div>
+
+<script type="module">
+  import { supabase, showToast } from './js/supabase.js';
+  import { gerarRelatorioEvolucao, gerarRelatorioProfissional } from './js/EvolutionReportService.js';
+
+  const conteudo = document.getElementById('relatorioConteudo');
+  const periodBar = document.getElementById('periodBar');
+  const modeToggle = document.getElementById('modeToggle');
+  const footerActions = document.getElementById('footerActions');
+  const exportarPdfBtn = document.getElementById('exportarPdfBtn');
+
+  let diasSelecionados = 30;
+  let exerciciosExpandido = false;
+  let modoAtual = 'pessoal';
+  let relatorioPessoal = null;
+  let relatorioProfissional = null; // carregado sob demanda (lazy)
+
+  // ── Helpers de formatação ─────────────────────────────────────
+
+  function formatKg(valor) {
+    if (valor === null || valor === undefined) return '—';
+    return `${valor.toLocaleString('pt-BR')} kg`;
+  }
+  function deltaClasse(pct) {
+    if (pct === null || pct === undefined) return 'neutral';
+    return pct > 0 ? 'up' : pct < 0 ? 'down' : 'neutral';
+  }
+  function deltaTexto(pct) {
+    if (pct === null || pct === undefined) return '—';
+    const seta = pct > 0 ? '↑' : pct < 0 ? '↓' : '→';
+    return `${seta} ${Math.abs(pct)}%`;
+  }
+  function formatDataCurta(isoString) {
+    const d = new Date(isoString);
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+  }
+
+  // ── Modo pessoal (Fase 1) ──────────────────────────────────────
+
+  function renderSequencia(maiorSequenciaDias) {
+    const LIMITE_BOLINHAS = 14;
+    if (maiorSequenciaDias === 0) {
+      return `<div style="font-size:13px;color:var(--text-3)">Nenhuma sequência ativa no período.</div>`;
+    }
+    if (maiorSequenciaDias <= LIMITE_BOLINHAS) {
+      let bolinhas = '';
+      for (let i = 0; i < maiorSequenciaDias; i++) {
+        bolinhas += `<div class="streak-dot filled"></div>`;
+      }
+      bolinhas += `<div class="streak-dot next"></div>`;
+      return `<div class="streak-dots">${bolinhas}</div>`;
+    }
+    // acima do limite: vira barra contínua, não tenta caber um ponto por dia
+    return `
+      <div class="streak-bar-wrap">
+        <div class="streak-bar-track"><div class="streak-bar-fill"></div></div>
+        <span class="streak-bar-label">${maiorSequenciaDias} dias</span>
+      </div>
+    `;
+  }
+
+  function renderResumo(resumo, freq, indice) {
+    const temIndice = indice && indice.disponivel;
+
+    const heroCard = temIndice ? `
+      <div class="hero-card">
+        <div class="hero-card-label">Seu período em números</div>
+        <div class="hero-card-numero">${indice.indice}</div>
+        <div class="hero-card-status">${indice.label}</div>
+        <div class="hero-card-sub">${resumo.treinosRealizados} treinos · ${resumo.volumeTotalKg.toLocaleString('pt-BR')}kg de volume · ${resumo.recordesPessoais} recordes</div>
+      </div>
+    ` : `
+      <div class="hero-card hero-card-simples">
+        <div class="hero-card-label">Seu período em números</div>
+        <div class="hero-card-numero">${resumo.treinosRealizados}</div>
+        <div class="hero-card-status">${resumo.treinosPrevistos ? `de ${resumo.treinosPrevistos} treinos planejados` : 'treinos realizados'}</div>
+        <div class="hero-card-sub">${resumo.volumeTotalKg.toLocaleString('pt-BR')}kg de volume · ${resumo.recordesPessoais} recordes</div>
+      </div>
+    `;
+
+    return `
+      <div class="rel-section">
+        ${heroCard}
+
+        <div class="stat-scroll">
+          <div class="stat-chip">
+            <div class="stat-chip-valor">${resumo.treinosRealizados}${resumo.treinosPrevistos ? `<span class="stat-chip-unit">/${resumo.treinosPrevistos}</span>` : ''}</div>
+            <div class="stat-chip-label">treinos</div>
+          </div>
+          <div class="stat-chip">
+            <div class="stat-chip-valor ${deltaClasse(resumo.cargaMediaVariacaoPct)}">${deltaTexto(resumo.cargaMediaVariacaoPct)}</div>
+            <div class="stat-chip-label">carga média</div>
+          </div>
+          <div class="stat-chip">
+            <div class="stat-chip-valor ${deltaClasse(resumo.volumeVariacaoPct)}">${deltaTexto(resumo.volumeVariacaoPct)}</div>
+            <div class="stat-chip-label">volume</div>
+          </div>
+          <div class="stat-chip">
+            <div class="stat-chip-valor">${resumo.recordesPessoais}</div>
+            <div class="stat-chip-label">recordes</div>
+          </div>
+        </div>
+
+        <div class="streak-section">
+          <div class="streak-header">
+            <span class="streak-title">Sequência atual</span>
+            <span class="streak-dias">${freq.maiorSequenciaDias} dias</span>
+          </div>
+          ${renderSequencia(freq.maiorSequenciaDias)}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderHeatmapDias(freq) {
+    const diasSet = new Set(freq.diasComTreino);
+    const hoje = new Date();
+    const inicio = new Date(hoje.getTime() - diasSelecionados * 24 * 60 * 60 * 1000);
+    let html = '';
+    for (let d = new Date(inicio); d <= hoje; d.setDate(d.getDate() + 1)) {
+      const chave = d.toISOString().slice(0, 10);
+      html += `<div class="heatmap-day ${diasSet.has(chave) ? 'treino' : ''}" title="${chave}"></div>`;
+    }
+    return html;
+  }
+
+  function renderPerformance(exercicios) {
+    if (!exercicios.length) {
+      return `
+        <div class="rel-section">
+          <div class="rel-section-title">Performance por Exercício</div>
+          <div class="empty-state"><div class="icon">📊</div><p>Nenhum exercício registrado neste período.</p></div>
+        </div>
+      `;
+    }
+    const limite = exerciciosExpandido ? exercicios.length : 5;
+    const visiveis = exercicios.slice(0, limite);
+    const rows = visiveis.map(ex => {
+      const rpeAlto = ex.rpeMedio != null && ex.rpeMedio > 9;
+      return `
+      <div class="exercicio-row">
+        <div>
+          <div class="exercicio-nome-wrap">
+            <span class="exercicio-nome">${ex.nome}</span>
+            ${ex.bateuRecordeNoPeriodo ? '<span class="exercicio-trofeu">🏆</span>' : ''}
+          </div>
+          <div class="exercicio-sub">
+            ${formatKg(ex.volumeKg)} volume · 1RM ${formatKg(ex.oneRmEstimadoKg)}
+            ${ex.rpeMedio != null ? ` · <span class="rpe-tag ${rpeAlto ? 'rpe-alto' : ''}">RPE ${ex.rpeMedio}${rpeAlto ? ' ⚠' : ''}</span>` : ''}
+          </div>
+        </div>
+        <div class="exercicio-principal">
+          <div class="exercicio-carga">${formatKg(ex.cargaMaximaKg)}</div>
+          <div class="exercicio-delta ${deltaClasse(ex.cargaMaximaVariacaoPct)}">${deltaTexto(ex.cargaMaximaVariacaoPct)}</div>
+        </div>
+      </div>
+    `;
+    }).join('');
+    const verMais = exercicios.length > 5
+      ? `<button class="ver-mais-btn" id="verMaisBtn">${exerciciosExpandido ? 'Ver menos' : `Ver mais ${exercicios.length - 5} exercícios`}</button>`
+      : '';
+    return `
+      <div class="rel-section">
+        <div class="rel-section-title">Performance por Exercício</div>
+        <div>${rows}</div>
+        ${verMais}
+      </div>
+    `;
+  }
+
+  function renderRecordes(recordes) {
+    if (!recordes.length) {
+      return `
+        <div class="rel-section">
+          <div class="rel-section-title">Recordes do Período</div>
+          <div class="empty-state"><div class="icon">🏆</div><p>Nenhum recorde batido neste período. Continue treinando!</p></div>
+        </div>
+      `;
+    }
+    const rows = recordes.map(r => `
+      <div class="recorde-row">
+        <div>
+          <div class="recorde-nome">${r.nome}</div>
+          <div class="recorde-data">${formatDataCurta(r.batidoEm)}</div>
+        </div>
+        <div class="recorde-valor">${formatKg(r.melhorCargaKg)}</div>
+      </div>
+    `).join('');
+    return `
+      <div class="rel-section">
+        <div class="rel-section-title">Recordes do Período</div>
+        <div>${rows}</div>
+      </div>
+    `;
+  }
+
+  function renderVolumePorGrupo(volumePorGrupo) {
+    const temDado = volumePorGrupo.some(g => g.volumeKg > 0);
+    if (!temDado) return '';
+
+    const rows = volumePorGrupo.map(g => `
+      <div class="volume-grupo-row">
+        <div class="volume-grupo-label">${g.grupo}</div>
+        <div class="volume-grupo-track"><div class="volume-grupo-fill" style="width:${Math.round(g.proporcao * 100)}%"></div></div>
+        <div class="volume-grupo-valor">${g.volumeKg.toLocaleString('pt-BR')}kg</div>
+      </div>
+    `).join('');
+
+    return `
+      <div class="rel-section">
+        <div class="rel-section-title">Volume por Grupamento</div>
+        <div class="card-sm">${rows}</div>
+      </div>
+    `;
+  }
+
+  function renderDiretrizes(diretrizes) {
+    if (!diretrizes.length) return '';
+
+    const icones = { volume: '📊', carga: '📈', consistencia: '🎯' };
+    const items = diretrizes.map(d => `
+      <div class="diretriz-item">
+        <span class="diretriz-icone">${icones[d.tipo] || '•'}</span>
+        <span>${d.texto}</span>
+      </div>
+    `).join('');
+
+    return `
+      <div class="rel-section">
+        <div class="rel-section-title">Diretrizes para o Próximo Ciclo</div>
+        <div class="diretrizes-card">${items}</div>
+      </div>
+    `;
+  }
+
+  function renderModoPessoal() {
+    conteudo.innerHTML = [
+      renderResumo(relatorioPessoal.resumoExecutivo, relatorioPessoal.frequenciaConsistencia, relatorioPessoal.indiceEvolucao),
+      renderVolumePorGrupo(relatorioPessoal.volumePorGrupo),
+      renderPerformance(relatorioPessoal.performancePorExercicio),
+      renderRecordes(relatorioPessoal.recordesDoPeriodo),
+      renderDiretrizes(relatorioPessoal.diretrizes),
+    ].join('');
+
+    const verMaisBtn = document.getElementById('verMaisBtn');
+    if (verMaisBtn) {
+      verMaisBtn.addEventListener('click', () => {
+        exerciciosExpandido = !exerciciosExpandido;
+        renderModoPessoal();
+      });
+    }
+  }
+
+  // ── Modo profissional ──────────────────────────────────────────
+
+  // Cache dos SVGs base — buscados uma única vez, não a cada render
+  let diagramaFrenteBase = null;
+  let diagramaCostasBase = null;
+
+  async function carregarDiagramasBase() {
+    if (diagramaFrenteBase && diagramaCostasBase) return;
+    try {
+      const [respFrente, respCostas] = await Promise.all([
+        fetch('assets/exercise-base/diagrama-frente.svg'),
+        fetch('assets/exercise-base/diagrama-costas.svg'),
+      ]);
+      diagramaFrenteBase = await respFrente.text();
+      diagramaCostasBase = await respCostas.text();
+    } catch (err) {
+      console.error('Erro ao carregar diagramas base:', err);
+      diagramaFrenteBase = null;
+      diagramaCostasBase = null;
+    }
+  }
+
+  // Cor por nível de intensidade — mesma paleta laranja do design system
+  const COR_INTENSIDADE = {
+    alto: '#f97316',   // var(--orange)
+    medio: '#fb923c',  // laranja mais claro
+    baixo: '#c2410c',  // laranja mais escuro/dessaturado — pouco volume
+  };
+
+  /**
+   * Recebe o texto de um SVG base e uma lista de {svgId, intensidade},
+   * aplica a cor no atributo fill de cada <path id="svgId"> encontrado,
+   * e devolve o SVG como string pronta pra injetar no DOM.
+   */
+  function colorirDiagrama(svgTexto, gruposDesseSvg) {
+    if (!svgTexto) return '';
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svgTexto, 'image/svg+xml');
+
+    for (const g of gruposDesseSvg) {
+      if (!g.svgId) continue;
+      const path = doc.getElementById(g.svgId);
+      if (!path) continue; // path não encontrado — id não bate, não quebra o resto
+      const cor = COR_INTENSIDADE[g.intensidade] || 'transparent';
+      path.setAttribute('fill', cor);
+    }
+
+    return new XMLSerializer().serializeToString(doc.documentElement);
+  }
+
+  async function renderResumoCorporal(resumoCorporal) {
+    if (!resumoCorporal.grupos.length) {
+      return `
+        <div class="rel-section">
+          <div class="rel-section-title">Resumo Corporal — últimos 7 dias</div>
+          <div class="card-sm" style="color: var(--text-3); font-size: 13px;">
+            Nenhum treino registrado nos últimos 7 dias.
+          </div>
+        </div>
+      `;
+    }
+
+    await carregarDiagramasBase();
+
+    const gruposFrente = resumoCorporal.grupos.filter(g => g.svg === 'frente');
+    const gruposCostas = resumoCorporal.grupos.filter(g => g.svg === 'costas');
+
+    const svgFrenteColorido = diagramaFrenteBase ? colorirDiagrama(diagramaFrenteBase, gruposFrente) : '';
+    const svgCostasColorido = diagramaCostasBase ? colorirDiagrama(diagramaCostasBase, gruposCostas) : '';
+
+    const legenda = resumoCorporal.grupos.map(g => {
+      const cor = COR_INTENSIDADE[g.intensidade] || '#3a3a3a';
+      return `
+        <div class="legenda-item">
+          <span class="legenda-dot" style="background:${cor}"></span>
+          <span>${g.grupoMuscular} — volume ${g.intensidade}</span>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="rel-section">
+        <div class="rel-section-title">Resumo Corporal — últimos 7 dias</div>
+        <div class="card-sm diagrama-card">
+          <div class="diagramas-svgs">
+            ${svgFrenteColorido || svgCostasColorido ? '' : '<span style="font-size:12px;color:var(--text-3)">Diagrama indisponível</span>'}
+            ${svgFrenteColorido}
+            ${svgCostasColorido}
+          </div>
+          <div class="legenda-lista">${legenda}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderSparkline(historico) {
+    if (!historico || !historico.length) return '<div class="spark"></div>';
+    const max = Math.max(...historico, 1);
+    const barras = historico.map((v) => {
+      const altura = Math.max(4, Math.round((v / max) * 22));
+      return `<div style="height:${altura}px"></div>`;
+    }).join('');
+    return `<div class="spark">${barras}</div>`;
+  }
+
+  function renderIndiceSobrecarga(indice) {
+    if (!indice.suficiente) {
+      return `
+        <div class="rel-section">
+          <div class="card-sm" style="color: var(--text-3); font-size: 13px;">
+            Índice de sobrecarga indisponível — precisa de pelo menos 4 semanas de histórico de treino pra calcular com confiança.
+          </div>
+        </div>
+      `;
+    }
+    return `
+      <div class="rel-section">
+        <div class="card-sm sobrecarga-card status-${indice.status}">
+          <div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;color:var(--text-2)">Índice de sobrecarga</div>
+            <div style="font-size:12px;color:var(--text-2)">volume dos últimos 7 dias vs. média das 4 semanas anteriores</div>
+          </div>
+          <div class="sobrecarga-valor status-${indice.status}">${indice.indicePercentual}%</div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderAtencao(comparativo) {
+    const alertas = [];
+    for (const grupo of comparativo) {
+      for (const ex of grupo.exercicios) {
+        if (ex.sinal === 'fadiga') {
+          alertas.push({ nome: ex.nome, texto: `RPE ${ex.executado.rpeMedio} vs alvo ${ex.planejado.rpeAlvo}`, cor: 'var(--yellow)' });
+        }
+      }
+    }
+    if (!alertas.length) return '';
+    return `
+      <div class="rel-section">
+        <div class="card-sm atencao-card">
+          <div style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Atenção — ${alertas.length} exercício${alertas.length > 1 ? 's' : ''}</div>
+          ${alertas.map(a => `
+            <div class="atencao-item">
+              <span style="font-size:13px;font-weight:600;color:var(--text)">${a.nome}</span>
+              <span style="font-size:12px;color:${a.cor}">${a.texto}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderGruposMusculares(comparativo) {
+    if (!comparativo.length) {
+      return `
+        <div class="rel-section">
+          <div class="empty-state"><div class="icon">📋</div><p>Nenhum exercício registrado neste período.</p></div>
+        </div>
+      `;
+    }
+
+    return comparativo.map(grupo => {
+      const rows = grupo.exercicios.map(ex => {
+        const sinalTexto = ex.sinal === 'progrediu' ? '↑ progrediu' : ex.sinal === 'fadiga' ? 'RPE alto' : ex.sinal === 'estavel' ? 'estável' : '';
+        const sinalClasse = ex.sinal ? `sinal-${ex.sinal}` : '';
+
+        const rpeAltoExecutado = ex.executado.rpeMedio != null && ex.executado.rpeMedio > 9;
+        const blocoPlanejado = ex.temPlanejado ? `
+          <div class="pe-label">Planejado</div>
+          <div class="pe-planejado">${ex.planejado.series}x${ex.planejado.reps} · ${formatKg(ex.planejado.cargaKg)} · RPE ${ex.planejado.rpeAlvo ?? '—'}</div>
+        ` : `<div class="pe-label" style="color: var(--text-3);">sem planejado</div>`;
+
+        return `
+          <div class="pe-row">
+            <div class="pe-top">
+              <span class="pe-nome">${ex.nome}${ex.bateuRecordeNoPeriodo ? ' 🏆' : ''}</span>
+              ${sinalTexto ? `<span style="font-size:12px;font-weight:600;" class="${sinalClasse}">${sinalTexto}</span>` : ''}
+            </div>
+            <div class="pe-body">
+              <div class="pe-col">
+                ${blocoPlanejado}
+                <div class="pe-label" style="margin-top:4px">Executado</div>
+                <div class="pe-executado">${ex.executado.totalSeries}x · ${formatKg(ex.executado.cargaMaximaKg)} · <span class="rpe-tag ${rpeAltoExecutado ? 'rpe-alto' : ''}" style="font-size:inherit;">RPE ${ex.executado.rpeMedio ?? '—'}${rpeAltoExecutado ? ' ⚠' : ''}</span></div>
+              </div>
+              ${renderSparkline(ex.historicoCargas)}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="rel-section">
+          <div class="rel-section-title">${grupo.grupoMuscular}</div>
+          <div class="card-sm">${rows}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function renderModoProfissional() {
+    const resumoCorporalHtml = await renderResumoCorporal(relatorioProfissional.resumoCorporal);
+
+    const partes = [
+      resumoCorporalHtml,
+      renderIndiceSobrecarga(relatorioProfissional.indiceSobrecarga),
+      renderAtencao(relatorioProfissional.comparativoPlanejadoExecutado),
+      renderGruposMusculares(relatorioProfissional.comparativoPlanejadoExecutado),
+      renderRecordes(relatorioProfissional.recordesDoPeriodo),
+    ];
+    conteudo.innerHTML = partes.join('');
+  }
+
+  // ── Carregamento ────────────────────────────────────────────────
+
+  async function obterUsuarioLogado() {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) {
+      showToast('Sessão expirada. Faça login novamente.', 'error');
+      return null;
+    }
+    return user;
+  }
+
+  async function carregarModoPessoal() {
+    conteudo.innerHTML = '<div class="rel-loading">Carregando relatório…</div>';
+    exerciciosExpandido = false;
+
+    const user = await obterUsuarioLogado();
+    if (!user) return;
+
+    const dataFim = new Date();
+    const dataInicio = new Date(dataFim.getTime() - diasSelecionados * 24 * 60 * 60 * 1000);
+
+    try {
+      relatorioPessoal = await gerarRelatorioEvolucao(user.id, dataInicio.toISOString(), dataFim.toISOString());
+      renderModoPessoal();
+    } catch (err) {
+      console.error('Erro ao gerar relatório pessoal:', err);
+      showToast('Erro ao carregar o relatório', 'error');
+      conteudo.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Não foi possível carregar o relatório.</p></div>`;
+    }
+  }
+
+  async function carregarModoProfissional() {
+    conteudo.innerHTML = '<div class="rel-loading">Carregando modo profissional…</div>';
+
+    const user = await obterUsuarioLogado();
+    if (!user) return;
+
+    const dataFim = new Date();
+    const dataInicio = new Date(dataFim.getTime() - diasSelecionados * 24 * 60 * 60 * 1000);
+
+    try {
+      relatorioProfissional = await gerarRelatorioProfissional(user.id, dataInicio.toISOString(), dataFim.toISOString());
+      await renderModoProfissional();
+    } catch (err) {
+      console.error('Erro ao gerar relatório profissional:', err);
+      showToast('Erro ao carregar o modo profissional', 'error');
+      conteudo.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Não foi possível carregar o modo profissional.</p></div>`;
+    }
+  }
+
+  function atualizarFooter() {
+    footerActions.style.display = 'block'; // export disponível nos dois modos agora
+  }
+
+  // ── Eventos ─────────────────────────────────────────────────────
+
+  periodBar.addEventListener('click', (e) => {
+    const btn = e.target.closest('.period-btn');
+    if (!btn) return;
+    periodBar.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    diasSelecionados = parseInt(btn.dataset.dias, 10);
+    relatorioProfissional = null; // período mudou: invalida cache do profissional
+    modoAtual === 'pessoal' ? carregarModoPessoal() : carregarModoProfissional();
+  });
+
+  modeToggle.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    const novoModo = btn.dataset.modo;
+    if (novoModo === modoAtual) return;
+
+    modeToggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    modoAtual = novoModo;
+    atualizarFooter();
+
+    if (novoModo === 'pessoal') {
+      relatorioPessoal ? renderModoPessoal() : await carregarModoPessoal();
+    } else {
+      relatorioProfissional ? await renderModoProfissional() : await carregarModoProfissional();
+    }
+  });
+
+  exportarPdfBtn.addEventListener('click', () => {
+    if (modoAtual === 'profissional') {
+      if (!relatorioProfissional) {
+        showToast('Carregue o modo profissional antes de exportar', 'error');
+        return;
+      }
+      exportarPdfProfissional(relatorioProfissional, diasSelecionados);
+    } else {
+      if (!relatorioPessoal) {
+        showToast('Carregue o relatório antes de exportar', 'error');
+        return;
+      }
+      exportarPdfPessoal(relatorioPessoal, diasSelecionados);
+    }
+  });
+
+  // ── Export PDF (jsPDF) ─────────────────────────────────────────
+  // GymTracker não tem a regra "previewPDF() never doc.save()" documentada
+  // (essa é uma regra específica do Nexus Escolar) — aqui usamos doc.save()
+  // diretamente, disparando o download nativo do navegador.
+  //
+  // Não usamos html2canvas — capturar o DOM em imagem pesaria mais o
+  // carregamento (biblioteca extra) e geraria um PDF de imagem só, sem
+  // texto selecionável/pesquisável. Preferimos montar o PDF campo a
+  // campo (mais leve, texto real), com o preço de não ser um "print"
+  // pixel-perfect da tela.
+
+  // Cabeçalho compartilhado pelos dois PDFs — como não temos o arquivo
+  // do logotipo oficial (RFC-022) disponível aqui, uso um wordmark de
+  // texto estilizado como substituto. Trocar por doc.addImage() com o
+  // PNG do logo quando tiver o arquivo em mãos.
+  function desenharCabecalhoPdf(doc, titulo, dias) {
+    doc.setFontSize(20);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(249, 115, 22); // --orange
+    doc.text('GYMTRACKER', 14, 18);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(0);
+    doc.setFontSize(14);
+    doc.text(titulo, 14, 28);
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+    doc.text(`Período: últimos ${dias} dias — gerado em ${new Date().toLocaleDateString('pt-BR')}`, 14, 35);
+    doc.setDrawColor(230);
+    doc.line(14, 40, 196, 40);
+    doc.setTextColor(0);
+    return 48; // posição Y onde o conteúdo deve começar
+  }
+
+  function exportarPdfPessoal(relatorio, dias) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    let y = desenharCabecalhoPdf(doc, 'Relatório de Evolução — Modo Pessoal', dias);
+
+    const r = relatorio.resumoExecutivo;
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('Resumo', 14, y);
+    doc.setFont(undefined, 'normal');
+    y += 7;
+    doc.setFontSize(10);
+    doc.text(`Treinos: ${r.treinosRealizados}${r.treinosPrevistos ? ` de ${r.treinosPrevistos}` : ''}`, 14, y); y += 6;
+    doc.text(`Volume total: ${r.volumeTotalKg.toLocaleString('pt-BR')}kg`, 14, y); y += 6;
+    doc.text(`Recordes pessoais: ${r.recordesPessoais}`, 14, y); y += 10;
+
+    if (relatorio.volumePorGrupo?.some(g => g.volumeKg > 0)) {
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text('Volume por Grupamento', 14, y);
+      doc.setFont(undefined, 'normal');
+      y += 7;
+      doc.setFontSize(10);
+      relatorio.volumePorGrupo.forEach(g => {
+        doc.text(`${g.grupo}: ${g.volumeKg.toLocaleString('pt-BR')}kg`, 14, y);
+        y += 6;
+      });
+      y += 4;
+    }
+
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('Performance por Exercício', 14, y);
+    doc.setFont(undefined, 'normal');
+    y += 7;
+
+    for (const ex of relatorio.performancePorExercicio) {
+      if (y > 275) { doc.addPage(); y = 20; }
+      doc.setFontSize(10);
+      doc.text(`${ex.nome}${ex.bateuRecordeNoPeriodo ? ' (PR)' : ''}`, 16, y);
+      y += 5;
+      doc.setFontSize(9);
+      doc.setTextColor(100);
+      const rpeTxt = ex.rpeMedio != null ? ` · RPE ${ex.rpeMedio}${ex.rpeMedio > 9 ? ' (alto)' : ''}` : '';
+      doc.text(`${formatKg(ex.cargaMaximaKg)} · volume ${formatKg(ex.volumeKg)}${rpeTxt}`, 16, y);
+      doc.setTextColor(0);
+      y += 8;
+    }
+
+    if (relatorio.diretrizes?.length) {
+      if (y > 250) { doc.addPage(); y = 20; }
+      y += 4;
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text('Diretrizes para o Próximo Ciclo', 14, y);
+      doc.setFont(undefined, 'normal');
+      y += 7;
+      doc.setFontSize(9);
+      relatorio.diretrizes.forEach(d => {
+        const linhas = doc.splitTextToSize(`• ${d.texto}`, 180);
+        doc.text(linhas, 16, y);
+        y += 5 * linhas.length + 2;
+      });
+    }
+
+    doc.save(`relatorio-evolucao-pessoal-${new Date().toISOString().slice(0, 10)}.pdf`);
+  }
+
+  function exportarPdfProfissional(relatorio, dias) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    let y = desenharCabecalhoPdf(doc, 'Relatório de Evolução — Modo Profissional', dias);
+
+    if (relatorio.indiceSobrecarga.suficiente) {
+      doc.setFontSize(12);
+      doc.text(`Índice de sobrecarga: ${relatorio.indiceSobrecarga.indicePercentual}% (${relatorio.indiceSobrecarga.status})`, 14, y);
+      y += 10;
+    }
+
+    for (const grupo of relatorio.comparativoPlanejadoExecutado) {
+      if (y > 270) { doc.addPage(); y = 20; }
+      doc.setFontSize(13);
+      doc.setFont(undefined, 'bold');
+      doc.text(grupo.grupoMuscular, 14, y);
+      doc.setFont(undefined, 'normal');
+      y += 7;
+
+      for (const ex of grupo.exercicios) {
+        if (y > 275) { doc.addPage(); y = 20; }
+        doc.setFontSize(11);
+        doc.text(`${ex.nome}${ex.bateuRecordeNoPeriodo ? ' (PR)' : ''}`, 16, y);
+        y += 5;
+        doc.setFontSize(9);
+        doc.setTextColor(100);
+        if (ex.temPlanejado) {
+          doc.text(`Planejado: ${ex.planejado.series}x${ex.planejado.reps} · ${ex.planejado.cargaKg ?? '—'}kg · RPE ${ex.planejado.rpeAlvo ?? '—'}`, 16, y);
+          y += 4.5;
+        }
+        const rpeAltoTxt = ex.executado.rpeMedio != null && ex.executado.rpeMedio > 9 ? ' (alto)' : '';
+        doc.text(`Executado: ${ex.executado.totalSeries}x · ${ex.executado.cargaMaximaKg ?? '—'}kg · RPE ${ex.executado.rpeMedio ?? '—'}${rpeAltoTxt}`, 16, y);
+        doc.setTextColor(0);
+        y += 8;
+      }
+      y += 4;
+    }
+
+    doc.save(`relatorio-evolucao-profissional-${new Date().toISOString().slice(0, 10)}.pdf`);
+  }
+
+  // ── Início ──────────────────────────────────────────────────────
+  atualizarFooter();
+  carregarModoPessoal();
+</script>
+
+</body>
+</html>
