@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Avaliação Física — GymTracker</title>
+<link rel="stylesheet" href="css/global.css">
+<link rel="icon" href="icons/favicon-32.png" type="image/png">
+<style>
+  .btn-voltar-dash {
+    background: transparent; border: 1px solid var(--border); color: var(--text-2);
+    border-radius: var(--radius); width: 38px; height: 38px; display: flex;
+    align-items: center; justify-content: center; cursor: pointer; text-decoration: none;
+    flex-shrink: 0; font-size: 17px; transition: all .15s;
+  }
+  .btn-voltar-dash:hover { background: var(--bg-2); color: var(--text); }
+  .page-header-row { display: flex; align-items: center; gap: 12px; }
+
+  .rel-section { margin-bottom: 32px; }
+  .rel-section-title {
+    font-size: 12px; font-weight: 600; color: var(--text-3); text-transform: uppercase;
+    letter-spacing: 0.08em; margin-bottom: 14px;
+  }
+
+  /* Formulário */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  .form-full { grid-column: 1 / -1; }
+
+  /* Comparação com a última avaliação */
+  .comparacao-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px; }
+  .comparacao-item { background: var(--bg-3); border-radius: var(--radius); padding: 12px; }
+  .comparacao-label { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+  .comparacao-valor { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 700; color: var(--text); }
+  .comparacao-delta { font-size: 12px; font-weight: 600; margin-top: 2px; }
+  .comparacao-delta.up { color: var(--green); }
+  .comparacao-delta.down { color: var(--red); }
+  .comparacao-delta.neutral { color: var(--text-3); }
+
+  /* Histórico */
+  .avaliacao-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 0; border-bottom: 1px solid var(--border);
+  }
+  .avaliacao-row:last-child { border-bottom: none; }
+  .avaliacao-data { font-size: 14px; font-weight: 600; color: var(--text); }
+  .avaliacao-metodo { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+  .avaliacao-metricas { text-align: right; font-size: 13px; color: var(--text-2); }
+  .avaliacao-acoes { display: flex; gap: 6px; margin-left: 12px; }
+  .icon-btn {
+    background: none; border: none; color: var(--text-3); cursor: pointer;
+    font-size: 14px; padding: 4px 6px; border-radius: var(--radius);
+  }
+  .icon-btn:hover { background: var(--bg-3); color: var(--text); }
+  .icon-btn.red:hover { color: var(--red); }
+
+  @media (max-width: 768px) {
+    .form-grid, .form-grid-3 { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-wrapper">
+
+  <div class="page-header">
+    <div class="page-header-row">
+      <a href="perfil.html" class="btn-voltar-dash" aria-label="Voltar ao perfil">←</a>
+      <div>
+        <h1>Avaliação Física</h1>
+        <p>Composição corporal — registre periodicamente para acompanhar a evolução.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comparação com a última avaliação -->
+  <div class="rel-section" id="secaoComparacao" style="display:none;">
+    <div class="rel-section-title">Desde a Última Avaliação</div>
+    <div class="card-sm">
+      <div class="comparacao-grid" id="comparacaoGrid"></div>
+    </div>
+  </div>
+
+  <!-- Formulário de nova avaliação -->
+  <div class="rel-section">
+    <div class="rel-section-title">Nova Avaliação</div>
+    <div class="card-sm">
+      <form id="formAvaliacao">
+        <div class="form-grid" style="margin-bottom:14px;">
+          <div class="form-group">
+            <label for="dataAvaliacao">Data</label>
+            <input type="date" id="dataAvaliacao" required>
+          </div>
+          <div class="form-group">
+            <label for="metodo">Método</label>
+            <select id="metodo">
+              <option value="bioimpedancia">Bioimpedância</option>
+              <option value="dobras_cutaneas">Dobras Cutâneas</option>
+              <option value="fita_metrica">Fita Métrica</option>
+              <option value="outro">Outro</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-grid-3" style="margin-bottom:14px;">
+          <div class="form-group">
+            <label for="pesoKg">Peso (kg)</label>
+            <input type="number" step="0.1" id="pesoKg" placeholder="80.5">
+          </div>
+          <div class="form-group">
+            <label for="percentualGordura">Gordura (%)</label>
+            <input type="number" step="0.1" id="percentualGordura" placeholder="22.0">
+          </div>
+          <div class="form-group">
+            <label for="massaMuscularKg">Massa Muscular (kg)</label>
+            <input type="number" step="0.1" id="massaMuscularKg" placeholder="35.0">
+          </div>
+        </div>
+
+        <div class="form-grid-3" style="margin-bottom:14px;">
+          <div class="form-group">
+            <label for="cinturaCm">Cintura (cm)</label>
+            <input type="number" step="0.1" id="cinturaCm">
+          </div>
+          <div class="form-group">
+            <label for="quadrilCm">Quadril (cm)</label>
+            <input type="number" step="0.1" id="quadrilCm">
+          </div>
+          <div class="form-group">
+            <label for="peitoCm">Peito (cm)</label>
+            <input type="number" step="0.1" id="peitoCm">
+          </div>
+        </div>
+
+        <div class="form-grid-3" style="margin-bottom:14px;">
+          <div class="form-group">
+            <label for="bracoDireitoCm">Braço Direito (cm)</label>
+            <input type="number" step="0.1" id="bracoDireitoCm">
+          </div>
+          <div class="form-group">
+            <label for="bracoEsquerdoCm">Braço Esquerdo (cm)</label>
+            <input type="number" step="0.1" id="bracoEsquerdoCm">
+          </div>
+          <div class="form-group"></div>
+        </div>
+
+        <div class="form-grid-3" style="margin-bottom:14px;">
+          <div class="form-group">
+            <label for="coxaDireitaCm">Coxa Direita (cm)</label>
+            <input type="number" step="0.1" id="coxaDireitaCm">
+          </div>
+          <div class="form-group">
+            <label for="coxaEsquerdaCm">Coxa Esquerda (cm)</label>
+            <input type="number" step="0.1" id="coxaEsquerdaCm">
+          </div>
+          <div class="form-group"></div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:16px;">
+          <label for="observacoes">Observações</label>
+          <textarea id="observacoes" rows="2" placeholder="Opcional"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full">Salvar Avaliação</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Histórico -->
+  <div class="rel-section">
+    <div class="rel-section-title">Histórico</div>
+    <div class="card-sm" id="listaHistorico">
+      <div class="empty-state"><div class="icon">📋</div><p>Carregando...</p></div>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+  import { supabase, showToast } from './js/supabase.js';
+  import { AvaliacaoFisicaService } from './js/AvaliacaoFisicaService.js';
+
+  let userId = null;
+
+  function formatMetodo(m) {
+    const nomes = { bioimpedancia: 'Bioimpedância', dobras_cutaneas: 'Dobras Cutâneas', fita_metrica: 'Fita Métrica', outro: 'Outro' };
+    return nomes[m] || m || '—';
+  }
+  function formatData(d) {
+    return new Date(d + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+  function deltaClasse(v, invertido = false) {
+    if (v == null || v === 0) return 'neutral';
+    const positivo = invertido ? v < 0 : v > 0;
+    return positivo ? 'up' : 'down';
+  }
+  function deltaTexto(v, unidade) {
+    if (v == null) return '';
+    const seta = v > 0 ? '↑' : v < 0 ? '↓' : '→';
+    return `${seta} ${Math.abs(v)}${unidade}`;
+  }
+
+  async function carregarComparacao() {
+    const comp = await AvaliacaoFisicaService.compararUltimasDuas(userId);
+    const secao = document.getElementById('secaoComparacao');
+    if (!comp) { secao.style.display = 'none'; return; }
+
+    secao.style.display = 'block';
+    const campos = [
+      { chave: 'peso_kg', label: 'Peso', unidade: 'kg', invertido: true },
+      { chave: 'percentual_gordura', label: 'Gordura', unidade: '%', invertido: true },
+      { chave: 'massa_muscular_kg', label: 'Massa Muscular', unidade: 'kg', invertido: false },
+      { chave: 'cintura_cm', label: 'Cintura', unidade: 'cm', invertido: true },
+    ];
+
+    document.getElementById('comparacaoGrid').innerHTML = campos.map(c => {
+      const v = comp.variacao[c.chave];
+      const atual = comp.atual[c.chave];
+      if (atual == null) return '';
+      return `
+        <div class="comparacao-item">
+          <div class="comparacao-label">${c.label}</div>
+          <div class="comparacao-valor">${atual}${c.unidade}</div>
+          <div class="comparacao-delta ${deltaClasse(v, c.invertido)}">${v != null ? deltaTexto(v, c.unidade) : '—'}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function carregarHistorico() {
+    const avaliacoes = await AvaliacaoFisicaService.listar(userId);
+    const container = document.getElementById('listaHistorico');
+
+    if (!avaliacoes.length) {
+      container.innerHTML = `<div class="empty-state"><div class="icon">📋</div><p>Nenhuma avaliação registrada ainda.</p></div>`;
+      return;
+    }
+
+    container.innerHTML = avaliacoes.map(a => `
+      <div class="avaliacao-row">
+        <div>
+          <div class="avaliacao-data">${formatData(a.data_avaliacao)}</div>
+          <div class="avaliacao-metodo">${formatMetodo(a.metodo)}</div>
+        </div>
+        <div class="avaliacao-metricas">
+          ${a.peso_kg ? `${a.peso_kg}kg` : ''}${a.percentual_gordura ? ` · ${a.percentual_gordura}% gordura` : ''}
+        </div>
+        <div class="avaliacao-acoes">
+          <button class="icon-btn red" onclick="excluirAvaliacao('${a.id}')" aria-label="Excluir">🗑</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  window.excluirAvaliacao = async (id) => {
+    if (!confirm('Excluir esta avaliação física? Essa ação não pode ser desfeita.')) return;
+    try {
+      await AvaliacaoFisicaService.excluir(id);
+      showToast('Avaliação excluída', 'info');
+      await Promise.all([carregarHistorico(), carregarComparacao()]);
+    } catch (e) {
+      showToast('Erro ao excluir: ' + e.message, 'erro');
+    }
+  };
+
+  document.getElementById('formAvaliacao').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const num = (id) => {
+      const v = document.getElementById(id).value;
+      return v === '' ? null : parseFloat(v);
+    };
+
+    const payload = {
+      data_avaliacao: document.getElementById('dataAvaliacao').value,
+      metodo: document.getElementById('metodo').value,
+      peso_kg: num('pesoKg'),
+      percentual_gordura: num('percentualGordura'),
+      massa_muscular_kg: num('massaMuscularKg'),
+      cintura_cm: num('cinturaCm'),
+      quadril_cm: num('quadrilCm'),
+      peito_cm: num('peitoCm'),
+      braco_direito_cm: num('bracoDireitoCm'),
+      braco_esquerdo_cm: num('bracoEsquerdoCm'),
+      coxa_direita_cm: num('coxaDireitaCm'),
+      coxa_esquerda_cm: num('coxaEsquerdaCm'),
+      observacoes: document.getElementById('observacoes').value || null,
+    };
+
+    try {
+      await AvaliacaoFisicaService.criar(userId, payload);
+      showToast('Avaliação salva!', 'sucesso');
+      e.target.reset();
+      document.getElementById('dataAvaliacao').valueAsDate = new Date();
+      await Promise.all([carregarHistorico(), carregarComparacao()]);
+    } catch (err) {
+      // erro já mostrado via showToast dentro do service
+    }
+  });
+
+  async function iniciar() {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) {
+      showToast('Sessão expirada. Faça login novamente.', 'erro');
+      return;
+    }
+    userId = user.id;
+    document.getElementById('dataAvaliacao').valueAsDate = new Date();
+    await Promise.all([carregarHistorico(), carregarComparacao()]);
+  }
+
+  iniciar();
+</script>
+
+</body>
+</html>

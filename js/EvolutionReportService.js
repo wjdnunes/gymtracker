@@ -174,40 +174,109 @@ export async function obterResumoExecutivo(userId, dataInicio, dataFim, treinosP
 }
 
 /**
+ * Busca as 2 avaliações físicas mais recentes (tabela `avaliacoes_fisicas`,
+ * MIGRATION_v10) até a data de fim do relatório, e calcula a variação de
+ * % de gordura e massa muscular. Não exige que as duas avaliações caiam
+ * dentro do período do relatório — avaliação física é tipicamente
+ * mensal, então um período de 7-30 dias raramente teria 2 registros
+ * dentro dele. Usa sempre a tendência mais recente disponível.
+ */
+export async function obterVariacaoComposicaoCorporal(userId, dataFim) {
+  const { data, error } = await supabase
+    .from('avaliacoes_fisicas')
+    .select('data_avaliacao, percentual_gordura, massa_muscular_kg')
+    .eq('user_id', userId)
+    .lte('data_avaliacao', dataFim.slice(0, 10))
+    .order('data_avaliacao', { ascending: false })
+    .limit(2);
+
+  if (error) {
+    showToast('Erro ao buscar avaliação física', 'error');
+    throw error;
+  }
+
+  if (!data || data.length < 2) {
+    return { disponivel: false };
+  }
+
+  const [atual, anterior] = data;
+  const variacaoGordura = (atual.percentual_gordura != null && anterior.percentual_gordura != null)
+    ? Math.round((atual.percentual_gordura - anterior.percentual_gordura) * 10) / 10
+    : null;
+  const variacaoMassaMuscular = (atual.massa_muscular_kg != null && anterior.massa_muscular_kg != null)
+    ? Math.round((atual.massa_muscular_kg - anterior.massa_muscular_kg) * 10) / 10
+    : null;
+
+  if (variacaoGordura === null && variacaoMassaMuscular === null) {
+    return { disponivel: false };
+  }
+
+  return {
+    disponivel: true,
+    dataAtual: atual.data_avaliacao,
+    dataAnterior: anterior.data_avaliacao,
+    variacaoGordura,
+    variacaoMassaMuscular,
+  };
+}
+
+/**
  * Índice de Evolução PARCIAL — usa só os 5 componentes que já temos dado
  * disponível hoje (frequência, progressão de carga, volume, PRs,
- * regularidade), sem Composição Corporal nem Equilíbrio Muscular (que
- * viriam nas Fases 2/3). Pesos originais do documento de produto,
- * renormalizados pra somar 100% entre os componentes disponíveis:
+ * regularidade, composição corporal quando há avaliação física
+ * registrada). Falta só Equilíbrio Muscular (10% original) — dado já
+ * existe via `obterVolumePorGrupoResumido`, mas ainda não conectado
+ * aqui. Pesos originais do documento de produto, renormalizados pra
+ * somar 100% entre os componentes disponíveis:
  *
- *   Frequência ......... peso original 20 -> ~27 (se meta definida)
- *   Progressão de carga . peso original 25 -> ~33
- *   Volume .............. peso original 15 -> ~20
- *   PRs ................. peso original 10 -> ~13
- *   Regularidade ........ peso original  5 -> ~7
+ *   Frequência ......... peso original 20
+ *   Progressão de carga . peso original 25
+ *   Volume .............. peso original 15
+ *   PRs ................. peso original 10
+ *   Composição corporal . peso original 15 (só se houver 2+ avaliações físicas)
+ *   Regularidade ........ peso original  5
  *
  * Cada score 0-100 usa uma transformação heurística simples — os limiares
  * (ex: "+25% de carga = nota 100") são um ponto de partida arbitrário,
  * ajustável depois de validar com uso real ou opinião de um personal.
- * Se `frequenciaPct` for null (usuário não definiu meta semanal), o peso
- * da frequência é redistribuído entre os outros 4 componentes.
+ * Componentes indisponíveis (sem meta de frequência, sem avaliação
+ * física registrada) têm o peso redistribuído entre os disponíveis.
  */
-export function calcularIndiceEvolucaoParcial(resumo, frequencia) {
+export function calcularIndiceEvolucaoParcial(resumo, frequencia, composicaoCorporal = { disponivel: false }) {
   const PESOS_ORIGINAIS = {
     frequencia: 20,
     progressaoCarga: 25,
     volume: 15,
     prs: 10,
+    composicaoCorporal: 15,
     regularidade: 5,
   };
 
   function clamp(v) { return Math.max(0, Math.min(100, v)); }
+
+  // Composição corporal: % gordura descendo é bom, massa muscular
+  // subindo é bom. Se só uma das duas métricas estiver disponível na
+  // avaliação, usa só ela; se as duas, faz a média.
+  let scoreComposicao = null;
+  if (composicaoCorporal.disponivel) {
+    const parciais = [];
+    if (composicaoCorporal.variacaoGordura !== null) {
+      parciais.push(clamp(50 - composicaoCorporal.variacaoGordura * 10));
+    }
+    if (composicaoCorporal.variacaoMassaMuscular !== null) {
+      parciais.push(clamp(50 + composicaoCorporal.variacaoMassaMuscular * 10));
+    }
+    if (parciais.length) {
+      scoreComposicao = parciais.reduce((a, b) => a + b, 0) / parciais.length;
+    }
+  }
 
   const scores = {
     frequencia: resumo.frequenciaPct !== null ? clamp(resumo.frequenciaPct) : null,
     progressaoCarga: resumo.cargaMediaVariacaoPct !== null ? clamp(50 + resumo.cargaMediaVariacaoPct * 2) : null,
     volume: resumo.volumeVariacaoPct !== null ? clamp(50 + resumo.volumeVariacaoPct * 1.5) : null,
     prs: clamp(resumo.recordesPessoais * 20), // 5+ PRs no período = nota máxima
+    composicaoCorporal: scoreComposicao,
     regularidade: clamp((frequencia.maiorSequenciaDias * 100) / 14), // 14 dias seguidos = nota máxima
   };
 
@@ -232,7 +301,7 @@ export function calcularIndiceEvolucaoParcial(resumo, frequencia) {
     disponivel: true,
     indice,
     label,
-    parcial: true, // sinaliza que não inclui Composição Corporal/Equilíbrio Muscular
+    parcial: !componentesDisponiveis.includes('composicaoCorporal'), // só "completo" quando composição corporal entra
     componentesUsados: componentesDisponiveis,
   };
 }
@@ -734,15 +803,16 @@ export async function obterResumoCorporal(userId, dataReferencia = new Date().to
 // ---------------------------------------------------------------------
 
 export async function gerarRelatorioEvolucao(userId, dataInicio, dataFim, treinosPlanejadosSemana = null) {
-  const [resumo, frequencia, performance, recordes, volumePorGrupo] = await Promise.all([
+  const [resumo, frequencia, performance, recordes, volumePorGrupo, composicaoCorporal] = await Promise.all([
     obterResumoExecutivo(userId, dataInicio, dataFim, treinosPlanejadosSemana),
     obterFrequenciaConsistencia(userId, dataInicio, dataFim),
     obterPerformancePorExercicio(userId, dataInicio, dataFim),
     obterRecordesDoPeriodo(userId, dataInicio, dataFim),
     obterVolumePorGrupoResumido(userId, dataInicio, dataFim),
+    obterVariacaoComposicaoCorporal(userId, dataFim),
   ]);
 
-  const indiceEvolucao = calcularIndiceEvolucaoParcial(resumo, frequencia);
+  const indiceEvolucao = calcularIndiceEvolucaoParcial(resumo, frequencia, composicaoCorporal);
   const diretrizes = calcularDiretrizes(resumo, performance, volumePorGrupo, frequencia);
 
   return {
@@ -751,6 +821,7 @@ export async function gerarRelatorioEvolucao(userId, dataInicio, dataFim, treino
     performancePorExercicio: performance,
     recordesDoPeriodo: recordes,
     volumePorGrupo,
+    composicaoCorporal,
     indiceEvolucao,
     diretrizes,
     geradoEm: new Date().toISOString(),

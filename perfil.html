@@ -132,9 +132,14 @@
       </div>
 
       <div class="card" style="margin-top:24px">
-        <div class="card-title">Evolução de peso</div>
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+          <span>Evolução de peso</span>
+          <a href="/avaliacao-fisica.html" class="btn btn-ghost btn-sm">Avaliação completa →</a>
+        </div>
         <p style="color:var(--text-2);font-size:13px;margin:6px 0 16px">
           Registre seu peso de vez em quando pra acompanhar a evolução ao longo do tempo.
+          Para bioimpedância, dobras cutâneas e medidas corporais completas, use a
+          <a href="/avaliacao-fisica.html" style="color:var(--orange)">Avaliação Física</a>.
         </p>
 
         <div class="grid-2" style="align-items:flex-end">
@@ -314,7 +319,7 @@
   </script>
   <script>
     if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
+      window.addEventListener("load", () => navigator.serviceWorker.register("/js/sw.js"));
     }
   </script>
 </body>

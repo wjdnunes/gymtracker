@@ -317,9 +317,11 @@
     if (valor === null || valor === undefined) return '—';
     return `${valor.toLocaleString('pt-BR')} kg`;
   }
-  function deltaClasse(pct) {
+  function deltaClasse(pct, invertido = false) {
     if (pct === null || pct === undefined) return 'neutral';
-    return pct > 0 ? 'up' : pct < 0 ? 'down' : 'neutral';
+    if (pct === 0) return 'neutral';
+    const positivo = invertido ? pct < 0 : pct > 0;
+    return positivo ? 'up' : 'down';
   }
   function deltaTexto(pct) {
     if (pct === null || pct === undefined) return '—';
@@ -355,14 +357,15 @@
     `;
   }
 
-  function renderResumo(resumo, freq, indice) {
+  function renderResumo(resumo, freq, indice, composicaoCorporal) {
     const temIndice = indice && indice.disponivel;
+    const indiceCompleto = temIndice && !indice.parcial;
 
     const heroCard = temIndice ? `
       <div class="hero-card">
         <div class="hero-card-label">Seu período em números</div>
         <div class="hero-card-numero">${indice.indice}</div>
-        <div class="hero-card-status">${indice.label}</div>
+        <div class="hero-card-status">${indice.label}${!indiceCompleto ? ' <span style="opacity:.7;font-weight:400;">(parcial)</span>' : ''}</div>
         <div class="hero-card-sub">${resumo.treinosRealizados} treinos · ${resumo.volumeTotalKg.toLocaleString('pt-BR')}kg de volume · ${resumo.recordesPessoais} recordes</div>
       </div>
     ` : `
@@ -372,6 +375,20 @@
         <div class="hero-card-status">${resumo.treinosPrevistos ? `de ${resumo.treinosPrevistos} treinos planejados` : 'treinos realizados'}</div>
         <div class="hero-card-sub">${resumo.volumeTotalKg.toLocaleString('pt-BR')}kg de volume · ${resumo.recordesPessoais} recordes</div>
       </div>
+    `;
+
+    const chipComposicao = composicaoCorporal?.disponivel ? `
+          <div class="stat-chip">
+            <div class="stat-chip-valor ${deltaClasse(composicaoCorporal.variacaoGordura, true)}">${composicaoCorporal.variacaoGordura != null ? deltaTexto(composicaoCorporal.variacaoGordura) : '—'}</div>
+            <div class="stat-chip-label">gordura corporal</div>
+          </div>
+    ` : `
+          <div class="stat-chip">
+            <div class="stat-chip-valor neutral" style="font-size:13px;">
+              <a href="/avaliacao-fisica.html" style="color:var(--orange);text-decoration:none;">+ Avaliação</a>
+            </div>
+            <div class="stat-chip-label">composição corporal</div>
+          </div>
     `;
 
     return `
@@ -395,6 +412,7 @@
             <div class="stat-chip-valor">${resumo.recordesPessoais}</div>
             <div class="stat-chip-label">recordes</div>
           </div>
+          ${chipComposicao}
         </div>
 
         <div class="streak-section">
@@ -531,7 +549,7 @@
 
   function renderModoPessoal() {
     conteudo.innerHTML = [
-      renderResumo(relatorioPessoal.resumoExecutivo, relatorioPessoal.frequenciaConsistencia, relatorioPessoal.indiceEvolucao),
+      renderResumo(relatorioPessoal.resumoExecutivo, relatorioPessoal.frequenciaConsistencia, relatorioPessoal.indiceEvolucao, relatorioPessoal.composicaoCorporal),
       renderVolumePorGrupo(relatorioPessoal.volumePorGrupo),
       renderPerformance(relatorioPessoal.performancePorExercicio),
       renderRecordes(relatorioPessoal.recordesDoPeriodo),
