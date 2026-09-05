@@ -182,9 +182,16 @@ export async function obterResumoExecutivo(userId, dataInicio, dataFim, treinosP
  * dentro dele. Usa sempre a tendência mais recente disponível.
  */
 export async function obterVariacaoComposicaoCorporal(userId, dataFim) {
+  // NOTA (MIGRATION_v11): a tabela `avaliacoes_fisicas` não tem uma coluna
+  // única `massa_muscular_kg` — tem `massa_magra_kg` (comum aos dois
+  // métodos) e `massa_muscular_esqueletica_kg` (só preenchida quando o
+  // método é bioimpedância, é uma medida mais específica que massa magra).
+  // `massaMuscularProxy()` abaixo usa a esquelética quando disponível
+  // (mais precisa) e cai pra massa magra como fallback, pra essa função
+  // continuar funcionando independente de qual método o usuário usou.
   const { data, error } = await supabase
     .from('avaliacoes_fisicas')
-    .select('data_avaliacao, percentual_gordura, massa_muscular_kg')
+    .select('data_avaliacao, percentual_gordura, massa_magra_kg, massa_muscular_esqueletica_kg')
     .eq('user_id', userId)
     .lte('data_avaliacao', dataFim.slice(0, 10))
     .order('data_avaliacao', { ascending: false })
@@ -199,12 +206,19 @@ export async function obterVariacaoComposicaoCorporal(userId, dataFim) {
     return { disponivel: false };
   }
 
+  function massaMuscularProxy(registro) {
+    return registro.massa_muscular_esqueletica_kg ?? registro.massa_magra_kg ?? null;
+  }
+
   const [atual, anterior] = data;
+  const massaAtual = massaMuscularProxy(atual);
+  const massaAnterior = massaMuscularProxy(anterior);
+
   const variacaoGordura = (atual.percentual_gordura != null && anterior.percentual_gordura != null)
     ? Math.round((atual.percentual_gordura - anterior.percentual_gordura) * 10) / 10
     : null;
-  const variacaoMassaMuscular = (atual.massa_muscular_kg != null && anterior.massa_muscular_kg != null)
-    ? Math.round((atual.massa_muscular_kg - anterior.massa_muscular_kg) * 10) / 10
+  const variacaoMassaMuscular = (massaAtual != null && massaAnterior != null)
+    ? Math.round((massaAtual - massaAnterior) * 10) / 10
     : null;
 
   if (variacaoGordura === null && variacaoMassaMuscular === null) {
@@ -221,34 +235,42 @@ export async function obterVariacaoComposicaoCorporal(userId, dataFim) {
 }
 
 /**
- * Índice de Evolução PARCIAL — usa só os 5 componentes que já temos dado
- * disponível hoje (frequência, progressão de carga, volume, PRs,
- * regularidade, composição corporal quando há avaliação física
- * registrada). Falta só Equilíbrio Muscular (10% original) — dado já
- * existe via `obterVolumePorGrupoResumido`, mas ainda não conectado
- * aqui. Pesos originais do documento de produto, renormalizados pra
- * somar 100% entre os componentes disponíveis:
+ * Índice de Evolução — agora com os 6 componentes originais do documento
+ * de produto (Equilíbrio Muscular conectado via `obterEquilibrioMuscular`,
+ * que combina pares antagonistas de volume + simetria física
+ * esquerdo/direito). Pesos originais, renormalizados pra somar 100%
+ * entre os componentes disponíveis:
  *
  *   Frequência ......... peso original 20
  *   Progressão de carga . peso original 25
  *   Volume .............. peso original 15
  *   PRs ................. peso original 10
  *   Composição corporal . peso original 15 (só se houver 2+ avaliações físicas)
+ *   Equilíbrio muscular . peso original 10 (só se houver pares antagonistas
+ *                          treinados no período e/ou avaliação física
+ *                          segmentar)
  *   Regularidade ........ peso original  5
  *
  * Cada score 0-100 usa uma transformação heurística simples — os limiares
  * (ex: "+25% de carga = nota 100") são um ponto de partida arbitrário,
  * ajustável depois de validar com uso real ou opinião de um personal.
  * Componentes indisponíveis (sem meta de frequência, sem avaliação
- * física registrada) têm o peso redistribuído entre os disponíveis.
+ * física registrada, sem par antagonista treinado no período) têm o
+ * peso redistribuído entre os disponíveis.
  */
-export function calcularIndiceEvolucaoParcial(resumo, frequencia, composicaoCorporal = { disponivel: false }) {
+export function calcularIndiceEvolucaoParcial(
+  resumo,
+  frequencia,
+  composicaoCorporal = { disponivel: false },
+  equilibrioMuscular = { disponivel: false }
+) {
   const PESOS_ORIGINAIS = {
     frequencia: 20,
     progressaoCarga: 25,
     volume: 15,
     prs: 10,
     composicaoCorporal: 15,
+    equilibrioMuscular: 10,
     regularidade: 5,
   };
 
@@ -277,6 +299,7 @@ export function calcularIndiceEvolucaoParcial(resumo, frequencia, composicaoCorp
     volume: resumo.volumeVariacaoPct !== null ? clamp(50 + resumo.volumeVariacaoPct * 1.5) : null,
     prs: clamp(resumo.recordesPessoais * 20), // 5+ PRs no período = nota máxima
     composicaoCorporal: scoreComposicao,
+    equilibrioMuscular: equilibrioMuscular.disponivel ? equilibrioMuscular.score : null,
     regularidade: clamp((frequencia.maiorSequenciaDias * 100) / 14), // 14 dias seguidos = nota máxima
   };
 
@@ -297,11 +320,17 @@ export function calcularIndiceEvolucaoParcial(resumo, frequencia, composicaoCorp
     : indice >= 50 ? 'Evolução moderada'
     : 'Atenção necessária';
 
+  // "completo" agora exige os dois componentes que dependem de dado extra
+  // do usuário (composição corporal E equilíbrio muscular), não só o
+  // primeiro — assim o rótulo reflete de verdade quando falta alguma coisa.
+  const completo = componentesDisponiveis.includes('composicaoCorporal')
+    && componentesDisponiveis.includes('equilibrioMuscular');
+
   return {
     disponivel: true,
     indice,
     label,
-    parcial: !componentesDisponiveis.includes('composicaoCorporal'), // só "completo" quando composição corporal entra
+    parcial: !completo,
     componentesUsados: componentesDisponiveis,
   };
 }
@@ -515,6 +544,168 @@ export async function obterVolumePorGrupoResumido(userId, dataInicio, dataFim) {
     volumeKg: Math.round(volume),
     proporcao: volume / max, // 0-1, pra desenhar a barra proporcional ao maior grupo
   }));
+}
+
+// ---------------------------------------------------------------------
+// SEÇÃO 6 — EQUILÍBRIO MUSCULAR (componente que faltava no Índice de
+// Evolução, peso original 10%)
+// ---------------------------------------------------------------------
+
+/**
+ * Pares antagonistas reais, usando os 17 `muscles.name_pt` individuais
+ * (não os "5 baldes" de obterVolumePorGrupoResumido — aqueles juntam
+ * Bíceps+Tríceps+Antebraço no mesmo balde "Braços", o que esconderia
+ * justamente o desequilíbrio entre antagonistas que queremos medir aqui).
+ */
+const PARES_ANTAGONISTAS = [
+  { nome: 'Peito x Costas', a: 'Peito', b: 'Costas' },
+  { nome: 'Bíceps x Tríceps', a: 'Bíceps', b: 'Tríceps' },
+  { nome: 'Quadríceps x Posterior de Coxa', a: 'Quadríceps', b: 'Posterior de Coxa' },
+];
+
+/**
+ * Volume de treino (kg) por músculo PRIMÁRIO individual, num período —
+ * granularidade fina (17 músculos), diferente do resumo de 5 baldes.
+ */
+async function obterVolumePorMusculoIndividual(userId, dataInicio, dataFim) {
+  const { data, error } = await supabase
+    .from('series_executadas')
+    .select(`
+      carga_kg, reps_feitas,
+      sessoes!inner ( user_id, iniciado_em ),
+      exercises ( exercise_muscles ( role, muscles ( name_pt ) ) )
+    `)
+    .eq('sessoes.user_id', userId)
+    .gte('sessoes.iniciado_em', dataInicio)
+    .lte('sessoes.iniciado_em', dataFim);
+
+  if (error) {
+    showToast('Erro ao buscar volume por músculo', 'error');
+    throw error;
+  }
+
+  const volumePorMusculo = {};
+  (data || []).forEach(s => {
+    const primario = s.exercises?.exercise_muscles?.find(em => em.role === 'primary');
+    const nomeMuscle = primario?.muscles?.name_pt;
+    if (!nomeMuscle) return;
+    if (s.carga_kg == null || s.reps_feitas == null) return;
+    volumePorMusculo[nomeMuscle] = (volumePorMusculo[nomeMuscle] || 0) + s.carga_kg * s.reps_feitas;
+  });
+
+  return volumePorMusculo;
+}
+
+/**
+ * Score 0-100 de um par antagonista: 100 = perfeitamente equilibrado
+ * (razão 1:1), caindo conforme um lado domina o outro. Usa a razão do
+ * menor sobre o maior (sempre 0-1) transformada em score.
+ */
+function scoreRazaoAntagonista(volumeA, volumeB) {
+  if (!volumeA && !volumeB) return null; // nenhum dos dois treinado no período
+  if (!volumeA || !volumeB) return 0; // só um lado treinado = desequilíbrio máximo
+  const razao = Math.min(volumeA, volumeB) / Math.max(volumeA, volumeB);
+  return Math.round(razao * 100);
+}
+
+/**
+ * Score 0-100 de simetria física esquerdo/direito, a partir de
+ * `massa_magra_segmentar` da avaliação física mais recente que tiver
+ * esse campo preenchido (normalmente só bioimpedância/InBody — dobras
+ * cutâneas não mede por segmento). Mesma lógica de razão do componente
+ * de treino: 100 = simetria perfeita.
+ */
+async function obterSimetriaFisica(userId, dataFim) {
+  const { data, error } = await supabase
+    .from('avaliacoes_fisicas')
+    .select('data_avaliacao, massa_magra_segmentar')
+    .eq('user_id', userId)
+    .not('massa_magra_segmentar', 'is', null)
+    .lte('data_avaliacao', dataFim.slice(0, 10))
+    .order('data_avaliacao', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    showToast('Erro ao buscar simetria física', 'error');
+    throw error;
+  }
+
+  if (!data?.massa_magra_segmentar) {
+    return { disponivel: false };
+  }
+
+  const seg = data.massa_magra_segmentar;
+  const pares = [
+    { nome: 'Braços', a: seg.braco_direito, b: seg.braco_esquerdo },
+    { nome: 'Pernas', a: seg.perna_direita, b: seg.perna_esquerda },
+  ].filter(p => p.a != null && p.b != null);
+
+  if (!pares.length) return { disponivel: false };
+
+  const detalhes = pares.map(p => ({
+    parte: p.nome,
+    direito: p.a,
+    esquerdo: p.b,
+    diferencaPct: Math.round((Math.abs(p.a - p.b) / Math.max(p.a, p.b)) * 1000) / 10,
+    score: scoreRazaoAntagonista(p.a, p.b),
+  }));
+
+  const scoreMedio = Math.round(detalhes.reduce((acc, d) => acc + d.score, 0) / detalhes.length);
+
+  return {
+    disponivel: true,
+    dataAvaliacao: data.data_avaliacao,
+    score: scoreMedio,
+    detalhes,
+  };
+}
+
+/**
+ * Componente combinado de Equilíbrio Muscular: junta o equilíbrio de
+ * ESTÍMULO DE TREINO (pares antagonistas, período do relatório) com a
+ * SIMETRIA FÍSICA real (esquerdo/direito, da avaliação física mais
+ * recente com dado segmentar). Quando só um dos dois está disponível,
+ * usa só esse — nunca inventa a metade que falta.
+ */
+export async function obterEquilibrioMuscular(userId, dataInicio, dataFim) {
+  const volumePorMusculo = await obterVolumePorMusculoIndividual(userId, dataInicio, dataFim);
+
+  const paresAvaliados = PARES_ANTAGONISTAS
+    .map(par => ({
+      nome: par.nome,
+      volumeA: Math.round(volumePorMusculo[par.a] || 0),
+      volumeB: Math.round(volumePorMusculo[par.b] || 0),
+      score: scoreRazaoAntagonista(volumePorMusculo[par.a], volumePorMusculo[par.b]),
+    }))
+    .filter(p => p.score !== null);
+
+  const scoreVolumeAntagonista = paresAvaliados.length
+    ? Math.round(paresAvaliados.reduce((acc, p) => acc + p.score, 0) / paresAvaliados.length)
+    : null;
+
+  const simetriaFisica = await obterSimetriaFisica(userId, dataFim);
+
+  const scoresParaCombinar = [];
+  if (scoreVolumeAntagonista !== null) scoresParaCombinar.push(scoreVolumeAntagonista);
+  if (simetriaFisica.disponivel) scoresParaCombinar.push(simetriaFisica.score);
+
+  if (!scoresParaCombinar.length) {
+    return { disponivel: false };
+  }
+
+  const scoreCombinado = Math.round(
+    scoresParaCombinar.reduce((a, b) => a + b, 0) / scoresParaCombinar.length
+  );
+
+  return {
+    disponivel: true,
+    score: scoreCombinado,
+    estimuloTreino: paresAvaliados.length
+      ? { score: scoreVolumeAntagonista, pares: paresAvaliados }
+      : { score: null, pares: [] },
+    simetriaFisica,
+  };
 }
 
 // =======================================================================
@@ -803,16 +994,17 @@ export async function obterResumoCorporal(userId, dataReferencia = new Date().to
 // ---------------------------------------------------------------------
 
 export async function gerarRelatorioEvolucao(userId, dataInicio, dataFim, treinosPlanejadosSemana = null) {
-  const [resumo, frequencia, performance, recordes, volumePorGrupo, composicaoCorporal] = await Promise.all([
+  const [resumo, frequencia, performance, recordes, volumePorGrupo, composicaoCorporal, equilibrioMuscular] = await Promise.all([
     obterResumoExecutivo(userId, dataInicio, dataFim, treinosPlanejadosSemana),
     obterFrequenciaConsistencia(userId, dataInicio, dataFim),
     obterPerformancePorExercicio(userId, dataInicio, dataFim),
     obterRecordesDoPeriodo(userId, dataInicio, dataFim),
     obterVolumePorGrupoResumido(userId, dataInicio, dataFim),
     obterVariacaoComposicaoCorporal(userId, dataFim),
+    obterEquilibrioMuscular(userId, dataInicio, dataFim),
   ]);
 
-  const indiceEvolucao = calcularIndiceEvolucaoParcial(resumo, frequencia, composicaoCorporal);
+  const indiceEvolucao = calcularIndiceEvolucaoParcial(resumo, frequencia, composicaoCorporal, equilibrioMuscular);
   const diretrizes = calcularDiretrizes(resumo, performance, volumePorGrupo, frequencia);
 
   return {
@@ -822,6 +1014,7 @@ export async function gerarRelatorioEvolucao(userId, dataInicio, dataFim, treino
     recordesDoPeriodo: recordes,
     volumePorGrupo,
     composicaoCorporal,
+    equilibrioMuscular,
     indiceEvolucao,
     diretrizes,
     geradoEm: new Date().toISOString(),
