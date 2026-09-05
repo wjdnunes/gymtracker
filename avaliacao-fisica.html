@@ -1,316 +1,608 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Avaliação Física — GymTracker</title>
-<link rel="stylesheet" href="css/global.css">
-<link rel="icon" href="icons/favicon-32.png" type="image/png">
-<style>
-  .btn-voltar-dash {
-    background: transparent; border: 1px solid var(--border); color: var(--text-2);
-    border-radius: var(--radius); width: 38px; height: 38px; display: flex;
-    align-items: center; justify-content: center; cursor: pointer; text-decoration: none;
-    flex-shrink: 0; font-size: 17px; transition: all .15s;
-  }
-  .btn-voltar-dash:hover { background: var(--bg-2); color: var(--text); }
-  .page-header-row { display: flex; align-items: center; gap: 12px; }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#f97316" />
+  <title>GymTracker — Avaliação Física</title>
+  <link rel="stylesheet" href="css/global.css" />
+  <style>
+    .content { padding: 32px 0 64px; max-width: 720px; margin: 0 auto; }
 
-  .rel-section { margin-bottom: 32px; }
-  .rel-section-title {
-    font-size: 12px; font-weight: 600; color: var(--text-3); text-transform: uppercase;
-    letter-spacing: 0.08em; margin-bottom: 14px;
-  }
+    .page-header { margin-bottom: 28px; }
+    .page-header h1 { font-size: 1.6rem; }
+    .page-header p { color: var(--text-2); margin-top: 4px; font-size: 13px; }
 
-  /* Formulário */
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
-  .form-full { grid-column: 1 / -1; }
+    /* Alternância de método */
+    .metodo-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 6px;
+    }
+    .metodo-tab {
+      flex: 1;
+      text-align: center;
+      padding: 12px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-2);
+      transition: all .15s;
+      user-select: none;
+    }
+    .metodo-tab.active {
+      background: var(--orange);
+      color: #121212;
+    }
 
-  /* Comparação com a última avaliação */
-  .comparacao-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px; }
-  .comparacao-item { background: var(--bg-3); border-radius: var(--radius); padding: 12px; }
-  .comparacao-label { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
-  .comparacao-valor { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 700; color: var(--text); }
-  .comparacao-delta { font-size: 12px; font-weight: 600; margin-top: 2px; }
-  .comparacao-delta.up { color: var(--green); }
-  .comparacao-delta.down { color: var(--red); }
-  .comparacao-delta.neutral { color: var(--text-3); }
+    .form-section {
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .form-section h2 {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-3);
+      margin-bottom: 16px;
+      font-weight: 700;
+    }
 
-  /* Histórico */
-  .avaliacao-row {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 14px 0; border-bottom: 1px solid var(--border);
-  }
-  .avaliacao-row:last-child { border-bottom: none; }
-  .avaliacao-data { font-size: 14px; font-weight: 600; color: var(--text); }
-  .avaliacao-metodo { font-size: 12px; color: var(--text-3); margin-top: 2px; }
-  .avaliacao-metricas { text-align: right; font-size: 13px; color: var(--text-2); }
-  .avaliacao-acoes { display: flex; gap: 6px; margin-left: 12px; }
-  .icon-btn {
-    background: none; border: none; color: var(--text-3); cursor: pointer;
-    font-size: 14px; padding: 4px 6px; border-radius: var(--radius);
-  }
-  .icon-btn:hover { background: var(--bg-3); color: var(--text); }
-  .icon-btn.red:hover { color: var(--red); }
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .form-field label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-2);
+      margin-bottom: 6px;
+    }
+    .form-field input, .form-field select {
+      width: 100%;
+      background: var(--bg-3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 14px;
+    }
+    .form-field input:focus, .form-field select:focus {
+      outline: none;
+      border-color: var(--orange);
+    }
+    .field-hint { font-size: 11px; color: var(--text-3); margin-top: 4px; }
 
-  @media (max-width: 768px) {
-    .form-grid, .form-grid-3 { grid-template-columns: 1fr 1fr; }
-  }
-</style>
+    /* Segmentar: colapsável */
+    .segmentar-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      padding: 4px 0;
+    }
+    .segmentar-body { display: none; margin-top: 16px; }
+    .segmentar-body.open { display: block; }
+    .segmentar-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+    }
+    .segmentar-parte {
+      background: var(--bg-3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .segmentar-parte .nome { font-size: 12px; color: var(--text-2); margin-bottom: 8px; }
+    .segmentar-parte .campos { display: flex; gap: 8px; }
+    .segmentar-parte .campos input { font-size: 13px; padding: 8px; }
+
+    .resultado-preview {
+      background: var(--orange-glow, rgba(249,115,22,0.08));
+      border: 1px solid var(--orange);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .resultado-preview.show { display: block; }
+    .resultado-preview .valor {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--orange);
+    }
+
+    .historico-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .historico-item:last-child { border-bottom: none; }
+    .historico-item .data { font-size: 13px; font-weight: 600; }
+    .historico-item .meta { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+    .historico-item .pct { font-family: 'Barlow Condensed', sans-serif; font-size: 1.3rem; color: var(--orange); }
+    .historico-item .excluir { color: var(--text-3); cursor: pointer; font-size: 13px; margin-left: 12px; }
+    .historico-item .excluir:hover { color: #ef4444; }
+  </style>
 </head>
 <body>
 
-<div class="page-wrapper">
+  <nav class="navbar">
+    <a class="navbar-brand" href="/dashboard.html">Gym<span>Tracker</span></a>
+    <div class="navbar-nav">
+      <a href="/dashboard.html">Início</a>
+      <a href="/fichas.html">Fichas</a>
+      <a href="/treino.html">Treinar</a>
+      <a href="/historico.html">Histórico</a>
+      <a href="/relatorio.html">Relatório</a>
+      <a href="/avaliacao-fisica.html" class="active">Avaliação Física</a>
+      <a href="/perfil.html">Perfil</a>
+    </div>
+  </nav>
 
-  <div class="page-header">
-    <div class="page-header-row">
-      <a href="perfil.html" class="btn-voltar-dash" aria-label="Voltar ao perfil">←</a>
-      <div>
+  <div class="page-wrapper">
+    <div class="content">
+
+      <div class="page-header">
         <h1>Avaliação Física</h1>
-        <p>Composição corporal — registre periodicamente para acompanhar a evolução.</p>
+        <p>Registre sua composição corporal por dobras cutâneas ou bioimpedância.</p>
       </div>
-    </div>
-  </div>
 
-  <!-- Comparação com a última avaliação -->
-  <div class="rel-section" id="secaoComparacao" style="display:none;">
-    <div class="rel-section-title">Desde a Última Avaliação</div>
-    <div class="card-sm">
-      <div class="comparacao-grid" id="comparacaoGrid"></div>
-    </div>
-  </div>
+      <!-- Alternância de método -->
+      <div class="metodo-tabs">
+        <div class="metodo-tab active" data-metodo="dobras_cutaneas">Dobras Cutâneas</div>
+        <div class="metodo-tab" data-metodo="bioimpedancia">Bioimpedância (InBody)</div>
+      </div>
 
-  <!-- Formulário de nova avaliação -->
-  <div class="rel-section">
-    <div class="rel-section-title">Nova Avaliação</div>
-    <div class="card-sm">
-      <form id="formAvaliacao">
-        <div class="form-grid" style="margin-bottom:14px;">
-          <div class="form-group">
-            <label for="dataAvaliacao">Data</label>
-            <input type="date" id="dataAvaliacao" required>
-          </div>
-          <div class="form-group">
-            <label for="metodo">Método</label>
-            <select id="metodo">
-              <option value="bioimpedancia">Bioimpedância</option>
-              <option value="dobras_cutaneas">Dobras Cutâneas</option>
-              <option value="fita_metrica">Fita Métrica</option>
-              <option value="outro">Outro</option>
-            </select>
+      <form id="form-avaliacao">
+
+        <!-- Comum aos dois métodos -->
+        <div class="form-section">
+          <h2>Dados básicos</h2>
+          <div class="form-row">
+            <div class="form-field">
+              <label for="data-avaliacao">Data</label>
+              <input type="date" id="data-avaliacao" required />
+            </div>
+            <div class="form-field">
+              <label for="peso-kg">Peso (kg)</label>
+              <input type="number" step="0.1" id="peso-kg" required />
+            </div>
+            <div class="form-field">
+              <label for="altura-cm">Altura (cm)</label>
+              <input type="number" step="0.1" id="altura-cm" required />
+            </div>
           </div>
         </div>
 
-        <div class="form-grid-3" style="margin-bottom:14px;">
-          <div class="form-group">
-            <label for="pesoKg">Peso (kg)</label>
-            <input type="number" step="0.1" id="pesoKg" placeholder="80.5">
+        <!-- ===================== DOBRAS CUTÂNEAS ===================== -->
+        <div id="secao-dobras" class="form-section">
+          <h2>Protocolo</h2>
+          <div class="form-row">
+            <div class="form-field">
+              <label for="protocolo-dobras">Protocolo</label>
+              <select id="protocolo-dobras">
+                <option value="jp3" selected>Jackson & Pollock — 3 dobras</option>
+                <option value="jp7">Jackson & Pollock — 7 dobras</option>
+                <option value="faulkner4">Faulkner — 4 dobras</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="metodo-estimativa">Método de estimativa</label>
+              <select id="metodo-estimativa">
+                <option value="siri" selected>Siri</option>
+                <option value="brozek">Brözek</option>
+              </select>
+              <div class="field-hint">Não se aplica ao protocolo Faulkner (cálculo direto)</div>
+            </div>
           </div>
-          <div class="form-group">
-            <label for="percentualGordura">Gordura (%)</label>
-            <input type="number" step="0.1" id="percentualGordura" placeholder="22.0">
+
+          <h2 style="margin-top:20px">Dobras (mm)</h2>
+          <div class="form-row" id="campos-dobras">
+            <!-- Preenchido dinamicamente via JS conforme o protocolo -->
           </div>
-          <div class="form-group">
-            <label for="massaMuscularKg">Massa Muscular (kg)</label>
-            <input type="number" step="0.1" id="massaMuscularKg" placeholder="35.0">
+
+          <div class="resultado-preview" id="preview-dobras">
+            <div class="field-hint">Percentual de gordura estimado</div>
+            <div class="valor"><span id="preview-pct">—</span>%</div>
           </div>
         </div>
 
-        <div class="form-grid-3" style="margin-bottom:14px;">
-          <div class="form-group">
-            <label for="cinturaCm">Cintura (cm)</label>
-            <input type="number" step="0.1" id="cinturaCm">
+        <!-- ===================== BIOIMPEDÂNCIA ===================== -->
+        <div id="secao-bioimpedancia" class="form-section" style="display:none">
+          <h2>Composição corporal</h2>
+          <div class="form-row">
+            <div class="form-field">
+              <label for="agua-corporal">Água corporal total (L)</label>
+              <input type="number" step="0.1" id="agua-corporal" />
+            </div>
+            <div class="form-field">
+              <label for="proteina">Proteína (kg)</label>
+              <input type="number" step="0.1" id="proteina" />
+            </div>
+            <div class="form-field">
+              <label for="minerais">Minerais (kg)</label>
+              <input type="number" step="0.1" id="minerais" />
+            </div>
+            <div class="form-field">
+              <label for="massa-gorda-bio">Massa de gordura (kg)</label>
+              <input type="number" step="0.1" id="massa-gorda-bio" />
+            </div>
+            <div class="form-field">
+              <label for="massa-muscular-esqueletica">Massa muscular esquelética (kg)</label>
+              <input type="number" step="0.1" id="massa-muscular-esqueletica" />
+            </div>
+            <div class="form-field">
+              <label for="imc-bio">IMC (kg/m²)</label>
+              <input type="number" step="0.1" id="imc-bio" />
+            </div>
+            <div class="form-field">
+              <label for="pgc-bio">PGC — % de gordura</label>
+              <input type="number" step="0.1" id="pgc-bio" />
+            </div>
           </div>
-          <div class="form-group">
-            <label for="quadrilCm">Quadril (cm)</label>
-            <input type="number" step="0.1" id="quadrilCm">
+
+          <h2 style="margin-top:20px">Dados adicionais</h2>
+          <div class="form-row">
+            <div class="form-field">
+              <label for="peso-ideal">Peso ideal (kg)</label>
+              <input type="number" step="0.1" id="peso-ideal" />
+            </div>
+            <div class="form-field">
+              <label for="tmb">Taxa metabólica basal (kcal)</label>
+              <input type="number" id="tmb" />
+            </div>
+            <div class="form-field">
+              <label for="cintura-quadril">Relação cintura-quadril</label>
+              <input type="number" step="0.01" id="cintura-quadril" />
+            </div>
+            <div class="form-field">
+              <label for="gordura-visceral">Nível de gordura visceral</label>
+              <input type="number" id="gordura-visceral" />
+            </div>
+            <div class="form-field">
+              <label for="grau-obesidade">Grau de obesidade (%)</label>
+              <input type="number" step="0.1" id="grau-obesidade" />
+            </div>
+            <div class="form-field">
+              <label for="pontuacao-inbody">Pontuação InBody</label>
+              <input type="number" id="pontuacao-inbody" />
+            </div>
           </div>
-          <div class="form-group">
-            <label for="peitoCm">Peito (cm)</label>
-            <input type="number" step="0.1" id="peitoCm">
+
+          <!-- Composição corporal segmentar — colapsável -->
+          <div class="segmentar-toggle" id="toggle-segmentar">
+            <h2 style="margin:0">Composição corporal segmentar</h2>
+            <span id="segmentar-icone">▾</span>
+          </div>
+          <div class="segmentar-body" id="segmentar-body">
+            <div class="field-hint" style="margin-bottom:12px">
+              Opcional. Preencha massa magra e massa de gordura de cada parte do corpo (kg).
+            </div>
+            <div class="segmentar-grid">
+              <div class="segmentar-parte">
+                <div class="nome">Braço direito</div>
+                <div class="campos">
+                  <input type="number" step="0.01" placeholder="Magra" id="seg-magra-braco-direito" />
+                  <input type="number" step="0.01" placeholder="Gordura" id="seg-gordura-braco-direito" />
+                </div>
+              </div>
+              <div class="segmentar-parte">
+                <div class="nome">Braço esquerdo</div>
+                <div class="campos">
+                  <input type="number" step="0.01" placeholder="Magra" id="seg-magra-braco-esquerdo" />
+                  <input type="number" step="0.01" placeholder="Gordura" id="seg-gordura-braco-esquerdo" />
+                </div>
+              </div>
+              <div class="segmentar-parte">
+                <div class="nome">Tronco</div>
+                <div class="campos">
+                  <input type="number" step="0.01" placeholder="Magra" id="seg-magra-tronco" />
+                  <input type="number" step="0.01" placeholder="Gordura" id="seg-gordura-tronco" />
+                </div>
+              </div>
+              <div class="segmentar-parte">
+                <div class="nome">Perna direita</div>
+                <div class="campos">
+                  <input type="number" step="0.01" placeholder="Magra" id="seg-magra-perna-direita" />
+                  <input type="number" step="0.01" placeholder="Gordura" id="seg-gordura-perna-direita" />
+                </div>
+              </div>
+              <div class="segmentar-parte">
+                <div class="nome">Perna esquerda</div>
+                <div class="campos">
+                  <input type="number" step="0.01" placeholder="Magra" id="seg-magra-perna-esquerda" />
+                  <input type="number" step="0.01" placeholder="Gordura" id="seg-gordura-perna-esquerda" />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="form-grid-3" style="margin-bottom:14px;">
-          <div class="form-group">
-            <label for="bracoDireitoCm">Braço Direito (cm)</label>
-            <input type="number" step="0.1" id="bracoDireitoCm">
+        <div class="form-section">
+          <h2>Observações</h2>
+          <div class="form-field">
+            <textarea id="observacoes" rows="2" style="width:100%;background:var(--bg-3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:14px;"></textarea>
           </div>
-          <div class="form-group">
-            <label for="bracoEsquerdoCm">Braço Esquerdo (cm)</label>
-            <input type="number" step="0.1" id="bracoEsquerdoCm">
-          </div>
-          <div class="form-group"></div>
         </div>
 
-        <div class="form-grid-3" style="margin-bottom:14px;">
-          <div class="form-group">
-            <label for="coxaDireitaCm">Coxa Direita (cm)</label>
-            <input type="number" step="0.1" id="coxaDireitaCm">
-          </div>
-          <div class="form-group">
-            <label for="coxaEsquerdaCm">Coxa Esquerda (cm)</label>
-            <input type="number" step="0.1" id="coxaEsquerdaCm">
-          </div>
-          <div class="form-group"></div>
-        </div>
-
-        <div class="form-group" style="margin-bottom:16px;">
-          <label for="observacoes">Observações</label>
-          <textarea id="observacoes" rows="2" placeholder="Opcional"></textarea>
-        </div>
-
-        <button type="submit" class="btn btn-primary btn-full">Salvar Avaliação</button>
+        <button type="submit" class="btn btn-primary btn-lg" style="width:100%">Salvar avaliação</button>
       </form>
-    </div>
-  </div>
 
-  <!-- Histórico -->
-  <div class="rel-section">
-    <div class="rel-section-title">Histórico</div>
-    <div class="card-sm" id="listaHistorico">
-      <div class="empty-state"><div class="icon">📋</div><p>Carregando...</p></div>
-    </div>
-  </div>
-
-</div>
-
-<script type="module">
-  import { supabase, showToast } from './js/supabase.js';
-  import { AvaliacaoFisicaService } from './js/AvaliacaoFisicaService.js';
-
-  let userId = null;
-
-  function formatMetodo(m) {
-    const nomes = { bioimpedancia: 'Bioimpedância', dobras_cutaneas: 'Dobras Cutâneas', fita_metrica: 'Fita Métrica', outro: 'Outro' };
-    return nomes[m] || m || '—';
-  }
-  function formatData(d) {
-    return new Date(d + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
-  }
-  function deltaClasse(v, invertido = false) {
-    if (v == null || v === 0) return 'neutral';
-    const positivo = invertido ? v < 0 : v > 0;
-    return positivo ? 'up' : 'down';
-  }
-  function deltaTexto(v, unidade) {
-    if (v == null) return '';
-    const seta = v > 0 ? '↑' : v < 0 ? '↓' : '→';
-    return `${seta} ${Math.abs(v)}${unidade}`;
-  }
-
-  async function carregarComparacao() {
-    const comp = await AvaliacaoFisicaService.compararUltimasDuas(userId);
-    const secao = document.getElementById('secaoComparacao');
-    if (!comp) { secao.style.display = 'none'; return; }
-
-    secao.style.display = 'block';
-    const campos = [
-      { chave: 'peso_kg', label: 'Peso', unidade: 'kg', invertido: true },
-      { chave: 'percentual_gordura', label: 'Gordura', unidade: '%', invertido: true },
-      { chave: 'massa_muscular_kg', label: 'Massa Muscular', unidade: 'kg', invertido: false },
-      { chave: 'cintura_cm', label: 'Cintura', unidade: 'cm', invertido: true },
-    ];
-
-    document.getElementById('comparacaoGrid').innerHTML = campos.map(c => {
-      const v = comp.variacao[c.chave];
-      const atual = comp.atual[c.chave];
-      if (atual == null) return '';
-      return `
-        <div class="comparacao-item">
-          <div class="comparacao-label">${c.label}</div>
-          <div class="comparacao-valor">${atual}${c.unidade}</div>
-          <div class="comparacao-delta ${deltaClasse(v, c.invertido)}">${v != null ? deltaTexto(v, c.unidade) : '—'}</div>
-        </div>
-      `;
-    }).join('');
-  }
-
-  async function carregarHistorico() {
-    const avaliacoes = await AvaliacaoFisicaService.listar(userId);
-    const container = document.getElementById('listaHistorico');
-
-    if (!avaliacoes.length) {
-      container.innerHTML = `<div class="empty-state"><div class="icon">📋</div><p>Nenhuma avaliação registrada ainda.</p></div>`;
-      return;
-    }
-
-    container.innerHTML = avaliacoes.map(a => `
-      <div class="avaliacao-row">
-        <div>
-          <div class="avaliacao-data">${formatData(a.data_avaliacao)}</div>
-          <div class="avaliacao-metodo">${formatMetodo(a.metodo)}</div>
-        </div>
-        <div class="avaliacao-metricas">
-          ${a.peso_kg ? `${a.peso_kg}kg` : ''}${a.percentual_gordura ? ` · ${a.percentual_gordura}% gordura` : ''}
-        </div>
-        <div class="avaliacao-acoes">
-          <button class="icon-btn red" onclick="excluirAvaliacao('${a.id}')" aria-label="Excluir">🗑</button>
+      <!-- Histórico -->
+      <div class="form-section" style="margin-top:32px">
+        <h2>Histórico</h2>
+        <div id="lista-historico">
+          <div style="color:var(--text-3);text-align:center;padding:24px">Carregando...</div>
         </div>
       </div>
-    `).join('');
-  }
 
-  window.excluirAvaliacao = async (id) => {
-    if (!confirm('Excluir esta avaliação física? Essa ação não pode ser desfeita.')) return;
-    try {
-      await AvaliacaoFisicaService.excluir(id);
-      showToast('Avaliação excluída', 'info');
-      await Promise.all([carregarHistorico(), carregarComparacao()]);
-    } catch (e) {
-      showToast('Erro ao excluir: ' + e.message, 'erro');
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase, requireAuth, showToast } from './js/supabase.js';
+    import { AvaliacaoFisicaService } from './js/AvaliacaoFisicaService.js';
+
+    const user = await requireAuth();
+    if (!user) { window.location.href = "/index.html"; throw new Error("unauth"); }
+
+    // Sexo biológico é necessário pra fórmula de dobras cutâneas.
+    // Ajuste o nome da tabela/coluna se for diferente no seu schema de user_profiles.
+    let sexoUsuario = null;
+    {
+      const { data: perfil } = await supabase
+        .from('user_profiles')
+        .select('sexo')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      sexoUsuario = perfil?.sexo || null;
+      if (!sexoUsuario) {
+        showToast('Sexo biológico não cadastrado no perfil — necessário para dobras cutâneas', 'warning');
+      }
     }
-  };
 
-  document.getElementById('formAvaliacao').addEventListener('submit', async (e) => {
-    e.preventDefault();
+    document.getElementById('data-avaliacao').valueAsDate = new Date();
 
-    const num = (id) => {
-      const v = document.getElementById(id).value;
-      return v === '' ? null : parseFloat(v);
+    // ---------------- Alternância de método ----------------
+    let metodoAtual = 'dobras_cutaneas';
+    const tabs = document.querySelectorAll('.metodo-tab');
+    const secaoDobras = document.getElementById('secao-dobras');
+    const secaoBio = document.getElementById('secao-bioimpedancia');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        metodoAtual = tab.dataset.metodo;
+        secaoDobras.style.display = metodoAtual === 'dobras_cutaneas' ? 'block' : 'none';
+        secaoBio.style.display = metodoAtual === 'bioimpedancia' ? 'block' : 'none';
+      });
+    });
+
+    // ---------------- Campos dinâmicos de dobras por protocolo ----------------
+    const CAMPOS_POR_PROTOCOLO = {
+      jp3: { masculino: ['peitoral', 'abdominal', 'coxa'], feminino: ['triceps', 'suprailiaca', 'coxa'] },
+      jp7: { ambos: ['peitoral', 'axilar_media', 'triceps', 'subescapular', 'abdominal', 'suprailiaca', 'coxa'] },
+      faulkner4: { ambos: ['bicipital', 'triceps', 'subescapular', 'suprailiaca'] },
+    };
+    const LABEL_DOBRA = {
+      peitoral: 'Peitoral', abdominal: 'Abdominal', coxa: 'Coxa', triceps: 'Tríceps',
+      suprailiaca: 'Supra-ilíaca', subescapular: 'Subescapular', axilar_media: 'Axilar média',
+      bicipital: 'Bicipital',
     };
 
-    const payload = {
-      data_avaliacao: document.getElementById('dataAvaliacao').value,
-      metodo: document.getElementById('metodo').value,
-      peso_kg: num('pesoKg'),
-      percentual_gordura: num('percentualGordura'),
-      massa_muscular_kg: num('massaMuscularKg'),
-      cintura_cm: num('cinturaCm'),
-      quadril_cm: num('quadrilCm'),
-      peito_cm: num('peitoCm'),
-      braco_direito_cm: num('bracoDireitoCm'),
-      braco_esquerdo_cm: num('bracoEsquerdoCm'),
-      coxa_direita_cm: num('coxaDireitaCm'),
-      coxa_esquerda_cm: num('coxaEsquerdaCm'),
-      observacoes: document.getElementById('observacoes').value || null,
-    };
+    function renderCamposDobras() {
+      const protocolo = document.getElementById('protocolo-dobras').value;
+      const config = CAMPOS_POR_PROTOCOLO[protocolo];
+      const campos = config.ambos || config[sexoUsuario] || config.masculino;
+      const container = document.getElementById('campos-dobras');
+      container.innerHTML = campos.map(c => `
+        <div class="form-field">
+          <label for="dobra-${c}">${LABEL_DOBRA[c]} (mm)</label>
+          <input type="number" step="0.1" id="dobra-${c}" data-dobra="${c}" required />
+        </div>
+      `).join('');
 
-    try {
-      await AvaliacaoFisicaService.criar(userId, payload);
-      showToast('Avaliação salva!', 'sucesso');
-      e.target.reset();
-      document.getElementById('dataAvaliacao').valueAsDate = new Date();
-      await Promise.all([carregarHistorico(), carregarComparacao()]);
-    } catch (err) {
-      // erro já mostrado via showToast dentro do service
+      // Recalcula preview a cada digitação
+      container.querySelectorAll('input').forEach(inp => inp.addEventListener('input', atualizarPreviewDobras));
     }
-  });
 
-  async function iniciar() {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (error || !user) {
-      showToast('Sessão expirada. Faça login novamente.', 'erro');
-      return;
+    function atualizarPreviewDobras() {
+      const protocolo = document.getElementById('protocolo-dobras').value;
+      const formula = document.getElementById('metodo-estimativa').value;
+      const inputs = document.querySelectorAll('#campos-dobras input[data-dobra]');
+      const dobras = {};
+      let completo = true;
+      inputs.forEach(inp => {
+        if (!inp.value) completo = false;
+        dobras[inp.dataset.dobra] = Number(inp.value);
+      });
+
+      const preview = document.getElementById('preview-dobras');
+      if (!completo || !sexoUsuario) {
+        preview.classList.remove('show');
+        return;
+      }
+      try {
+        // Idade calculada a partir do perfil seria ideal; usando placeholder de 30 anos
+        // caso não haja campo de idade no perfil — ajuste se necessário.
+        const idade = 30;
+        const resultado = AvaliacaoFisicaService.calcularDobrasCutaneas({
+          sexo: sexoUsuario, idade, protocolo, dobras, formula,
+        });
+        document.getElementById('preview-pct').textContent = resultado.percentualGordura;
+        preview.classList.add('show');
+      } catch (e) {
+        preview.classList.remove('show');
+      }
     }
-    userId = user.id;
-    document.getElementById('dataAvaliacao').valueAsDate = new Date();
-    await Promise.all([carregarHistorico(), carregarComparacao()]);
-  }
 
-  iniciar();
-</script>
+    document.getElementById('protocolo-dobras').addEventListener('change', renderCamposDobras);
+    document.getElementById('metodo-estimativa').addEventListener('change', atualizarPreviewDobras);
+    renderCamposDobras();
 
+    // ---------------- Segmentar colapsável ----------------
+    document.getElementById('toggle-segmentar').addEventListener('click', () => {
+      const body = document.getElementById('segmentar-body');
+      const icone = document.getElementById('segmentar-icone');
+      body.classList.toggle('open');
+      icone.textContent = body.classList.contains('open') ? '▴' : '▾';
+    });
+
+    // ---------------- Submit ----------------
+    document.getElementById('form-avaliacao').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const dataAvaliacao = document.getElementById('data-avaliacao').value;
+      const pesoKg = Number(document.getElementById('peso-kg').value);
+      const alturaCm = Number(document.getElementById('altura-cm').value);
+      const observacoes = document.getElementById('observacoes').value || null;
+      const imcCalculado = Number((pesoKg / ((alturaCm / 100) ** 2)).toFixed(1));
+
+      let payload;
+
+      if (metodoAtual === 'dobras_cutaneas') {
+        const protocolo = document.getElementById('protocolo-dobras').value;
+        const formulaConversao = document.getElementById('metodo-estimativa').value;
+        const dobras = {};
+        document.querySelectorAll('#campos-dobras input[data-dobra]').forEach(inp => {
+          dobras[inp.dataset.dobra] = Number(inp.value);
+        });
+
+        if (!sexoUsuario) {
+          showToast('Cadastre o sexo biológico no perfil antes de continuar', 'error');
+          return;
+        }
+
+        const idade = 30; // TODO: substituir pela idade real do perfil, se disponível
+        const resultado = AvaliacaoFisicaService.calcularDobrasCutaneas({
+          sexo: sexoUsuario, idade, protocolo, dobras, formula: formulaConversao,
+        });
+
+        payload = {
+          metodo: 'dobras_cutaneas',
+          dataAvaliacao, pesoKg, alturaCm, observacoes,
+          imc: imcCalculado,
+          percentualGordura: resultado.percentualGordura,
+          massaGordaKg: Number((pesoKg * resultado.percentualGordura / 100).toFixed(2)),
+          massaMagraKg: Number((pesoKg * (1 - resultado.percentualGordura / 100)).toFixed(2)),
+          protocolo, dobras, formulaConversao,
+        };
+
+      } else {
+        const val = id => {
+          const el = document.getElementById(id);
+          return el.value ? Number(el.value) : null;
+        };
+        const segmentarMagra = {
+          braco_direito: val('seg-magra-braco-direito'),
+          braco_esquerdo: val('seg-magra-braco-esquerdo'),
+          tronco: val('seg-magra-tronco'),
+          perna_direita: val('seg-magra-perna-direita'),
+          perna_esquerda: val('seg-magra-perna-esquerda'),
+        };
+        const segmentarGordura = {
+          braco_direito: val('seg-gordura-braco-direito'),
+          braco_esquerdo: val('seg-gordura-braco-esquerdo'),
+          tronco: val('seg-gordura-tronco'),
+          perna_direita: val('seg-gordura-perna-direita'),
+          perna_esquerda: val('seg-gordura-perna-esquerda'),
+        };
+        const temSegmentar = Object.values(segmentarMagra).some(v => v != null);
+
+        payload = {
+          metodo: 'bioimpedancia',
+          dataAvaliacao, pesoKg, alturaCm, observacoes,
+          imc: val('imc-bio') ?? imcCalculado,
+          percentualGordura: val('pgc-bio'),
+          massaGordaKg: val('massa-gorda-bio'),
+          massaMagraKg: pesoKg && val('massa-gorda-bio') != null
+            ? Number((pesoKg - val('massa-gorda-bio')).toFixed(2)) : null,
+          aguaCorporalTotalL: val('agua-corporal'),
+          proteinaKg: val('proteina'),
+          mineraisKg: val('minerais'),
+          massaMuscularEsqueleticaKg: val('massa-muscular-esqueletica'),
+          taxaMetabolicaBasalKcal: val('tmb'),
+          relacaoCinturaQuadril: val('cintura-quadril'),
+          nivelGorduraVisceral: val('gordura-visceral'),
+          grauObesidadePct: val('grau-obesidade'),
+          pontuacaoInbody: val('pontuacao-inbody'),
+          pesoIdealKg: val('peso-ideal'),
+          massaMagraSegmentar: temSegmentar ? segmentarMagra : null,
+          massaGorduraSegmentar: temSegmentar ? segmentarGordura : null,
+        };
+      }
+
+      try {
+        await AvaliacaoFisicaService.registrarAvaliacao(user.id, payload);
+        document.getElementById('form-avaliacao').reset();
+        document.getElementById('data-avaliacao').valueAsDate = new Date();
+        renderCamposDobras();
+        carregarHistorico();
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    // ---------------- Histórico ----------------
+    async function carregarHistorico() {
+      const lista = document.getElementById('lista-historico');
+      try {
+        const historico = await AvaliacaoFisicaService.listarHistorico(user.id, 10);
+        if (!historico?.length) {
+          lista.innerHTML = `<div style="color:var(--text-3);text-align:center;padding:24px">Nenhuma avaliação registrada ainda.</div>`;
+          return;
+        }
+        lista.innerHTML = historico.map(a => {
+          const data = new Date(a.data_avaliacao + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+          const metodoLabel = a.metodo === 'dobras_cutaneas' ? `Dobras (${a.protocolo_dobras?.toUpperCase()})` : 'Bioimpedância';
+          return `
+            <div class="historico-item">
+              <div>
+                <div class="data">${data}</div>
+                <div class="meta">${metodoLabel} · ${a.peso_kg ?? '—'}kg</div>
+              </div>
+              <div style="display:flex;align-items:center">
+                <div class="pct">${a.percentual_gordura ?? '—'}%</div>
+                <span class="excluir" data-id="${a.id}">✕</span>
+              </div>
+            </div>`;
+        }).join('');
+
+        lista.querySelectorAll('.excluir').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            if (!confirm('Excluir esta avaliação?')) return;
+            await AvaliacaoFisicaService.excluirAvaliacao(user.id, btn.dataset.id);
+            carregarHistorico();
+          });
+        });
+      } catch (err) {
+        lista.innerHTML = `<div style="color:var(--text-3);text-align:center;padding:24px">Erro ao carregar histórico.</div>`;
+      }
+    }
+
+    carregarHistorico();
+  </script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
+    }
+  </script>
 </body>
 </html>
