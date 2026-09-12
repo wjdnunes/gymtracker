@@ -46,7 +46,7 @@ export const WorkoutSessionService = {
         exercises (
           id, name_pt,
           exercise_muscles ( role, muscles ( name_pt ) ),
-          exercise_media ( provider, video_id, is_default )
+          exercise_media ( type, provider, video_id, is_default )
         )
       `)
       .eq('ficha_id', fichaId)
@@ -57,13 +57,35 @@ export const WorkoutSessionService = {
 
     const exercicios = exs.map(e => {
       const primaryMuscle = e.exercises?.exercise_muscles?.find(em => em.role === 'primary');
-      const media = e.exercises?.exercise_media?.find(m => m.is_default) || e.exercises?.exercise_media?.[0];
+      const midias = e.exercises?.exercise_media || [];
+      // Duas mídias distintas, cada uma com seu papel na tela de treino:
+      // - vídeo (provider+video_id, ex: YouTube) — link externo, abre em nova aba
+      // - gif (url direta, ex: Supabase Storage) — embutido inline no drawer
+      // `is_default` só desempata quando há mais de uma do MESMO tipo.
+      const videosDisponiveis = midias.filter(m => m.type === 'video');
+      const gifsDisponiveis = midias.filter(m => m.type === 'gif');
+      const videoMedia = videosDisponiveis.find(m => m.is_default) || videosDisponiveis[0];
+      const gifMedia = gifsDisponiveis.find(m => m.is_default) || gifsDisponiveis[0];
       const seriesGranulares = (e.ficha_exercicio_series || []).slice().sort((a,b) => a.numero_serie - b.numero_serie);
+
+      // `video_id` guarda coisas diferentes conforme o provider: ID do
+      // vídeo no YouTube/Vimeo, ou o caminho do arquivo dentro do bucket
+      // do Supabase Storage (nunca a URL completa) — a URL pública final
+      // é sempre montada aqui, igual já era feito só pra YouTube antes.
+      let mediaGifUrl = null;
+      if (gifMedia?.provider === 'storage' && gifMedia.video_id) {
+        const { data } = supabase.storage.from('exercicios-midia').getPublicUrl(gifMedia.video_id);
+        mediaGifUrl = data?.publicUrl || null;
+      } else if (gifMedia?.provider === 'local' && gifMedia.video_id) {
+        mediaGifUrl = gifMedia.video_id; // caminho já relativo ao próprio deploy
+      }
+
       return {
         ...e,
         nome: e.exercises?.name_pt || e.nome || 'Exercício',
         grupo_muscular: primaryMuscle?.muscles?.name_pt || '',
-        video_url: media?.video_id ? `https://www.youtube.com/watch?v=${media.video_id}` : null,
+        video_url: videoMedia?.video_id ? `https://www.youtube.com/watch?v=${videoMedia.video_id}` : null,
+        media_gif_url: mediaGifUrl,
         descanso_series_seg: e.descanso_series_seg || 90,
         series_granulares: seriesGranulares
       };

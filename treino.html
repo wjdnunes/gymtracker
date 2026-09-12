@@ -170,6 +170,26 @@
       text-decoration: none; display: block;
     }
 
+    /* GIF de demonstração — fica embutido no drawer/painel, sem
+       precisar sair do app pra ver a execução (diferente do link do
+       YouTube abaixo, que continua existindo como opção extra) */
+    .drawer-gif-wrap {
+      position: relative;
+      background: #000; border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+      aspect-ratio: 1 / 1; max-height: 260px;
+    }
+    .drawer-gif-wrap img {
+      width: 100%; height: 100%; object-fit: contain;
+      display: block; margin: 0 auto;
+    }
+    .drawer-gif-tag {
+      position: absolute; bottom: 6px; right: 6px;
+      font-size: 9px; letter-spacing: .04em; text-transform: uppercase;
+      background: rgba(0,0,0,0.6); color: var(--text-2);
+      padding: 2px 6px; border-radius: 4px;
+    }
+
     /* Cards de série */
     .serie-card {
       background: var(--bg-2); border: 1px solid var(--border);
@@ -691,9 +711,15 @@
       const series = seriesCache[exId];
       let html = '';
 
-      // Vídeo
+      // GIF de demonstração (inline, sem sair do app) + link opcional pro YouTube
+      if (ex.media_gif_url) {
+        html += `<div class="drawer-gif-wrap">
+          <img src="${ex.media_gif_url}" alt="Demonstração: ${ex.nome}" loading="lazy" />
+          <span class="drawer-gif-tag">GIF</span>
+        </div>`;
+      }
       if (ex.video_url) {
-        html += `<a class="drawer-video" href="${ex.video_url}" target="_blank">▶ Ver execução no YouTube</a>`;
+        html += `<a class="drawer-video" href="${ex.video_url}" target="_blank">▶ Ver execução completa no YouTube</a>`;
       }
 
       // Referência
@@ -960,10 +986,17 @@
 
       const series = seriesCache[ex.id];
       let html = `<div>
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:16px">
           <div><h2 style="font-size:1.6rem;margin:0">${ex.nome}</h2>${ex.grupo_muscular?`<div style="color:var(--orange);font-size:13px;margin-top:4px">${ex.grupo_muscular}</div>`:''}</div>
-          ${ex.video_url?`<a href="${ex.video_url}" target="_blank" class="btn btn-ghost btn-sm">▶ Ver execução</a>`:''}
+          ${ex.video_url?`<a href="${ex.video_url}" target="_blank" class="btn btn-ghost btn-sm" style="flex-shrink:0">▶ YouTube</a>`:''}
         </div>`;
+
+      if (ex.media_gif_url) {
+        html += `<div class="drawer-gif-wrap" style="max-height:220px;margin-bottom:20px">
+          <img src="${ex.media_gif_url}" alt="Demonstração: ${ex.nome}" loading="lazy" />
+          <span class="drawer-gif-tag">GIF</span>
+        </div>`;
+      }
 
       if (Object.keys(antMap).length) {
         html += `<div style="background:var(--bg-3);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:20px">
