@@ -179,7 +179,7 @@
       border-radius: var(--radius); overflow: hidden;
       aspect-ratio: 1 / 1; max-height: 260px;
     }
-    .drawer-gif-wrap img {
+    .drawer-gif-wrap img, .drawer-gif-wrap video {
       width: 100%; height: 100%; object-fit: contain;
       display: block; margin: 0 auto;
     }
@@ -711,8 +711,14 @@
       const series = seriesCache[exId];
       let html = '';
 
-      // GIF de demonstração (inline, sem sair do app) + link opcional pro YouTube
-      if (ex.media_gif_url) {
+      // Mídia de demonstração (inline, sem sair do app) + link opcional pro YouTube.
+      // Vídeo (mp4) tem prioridade sobre GIF quando os dois existem — melhor qualidade.
+      if (ex.media_video_url) {
+        html += `<div class="drawer-gif-wrap">
+          <video src="${ex.media_video_url}" autoplay loop muted playsinline></video>
+          <span class="drawer-gif-tag">VÍDEO</span>
+        </div>`;
+      } else if (ex.media_gif_url) {
         html += `<div class="drawer-gif-wrap">
           <img src="${ex.media_gif_url}" alt="Demonstração: ${ex.nome}" loading="lazy" />
           <span class="drawer-gif-tag">GIF</span>
@@ -991,7 +997,12 @@
           ${ex.video_url?`<a href="${ex.video_url}" target="_blank" class="btn btn-ghost btn-sm" style="flex-shrink:0">▶ YouTube</a>`:''}
         </div>`;
 
-      if (ex.media_gif_url) {
+      if (ex.media_video_url) {
+        html += `<div class="drawer-gif-wrap" style="max-height:220px;margin-bottom:20px">
+          <video src="${ex.media_video_url}" autoplay loop muted playsinline></video>
+          <span class="drawer-gif-tag">VÍDEO</span>
+        </div>`;
+      } else if (ex.media_gif_url) {
         html += `<div class="drawer-gif-wrap" style="max-height:220px;margin-bottom:20px">
           <img src="${ex.media_gif_url}" alt="Demonstração: ${ex.nome}" loading="lazy" />
           <span class="drawer-gif-tag">GIF</span>

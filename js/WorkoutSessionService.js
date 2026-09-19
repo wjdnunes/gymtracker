@@ -58,34 +58,43 @@ export const WorkoutSessionService = {
     const exercicios = exs.map(e => {
       const primaryMuscle = e.exercises?.exercise_muscles?.find(em => em.role === 'primary');
       const midias = e.exercises?.exercise_media || [];
-      // Duas mídias distintas, cada uma com seu papel na tela de treino:
-      // - vídeo (provider+video_id, ex: YouTube) — link externo, abre em nova aba
-      // - gif (url direta, ex: Supabase Storage) — embutido inline no drawer
+      // Quatro combinações possíveis de mídia:
+      // - vídeo externo (provider youtube/vimeo) — link, abre em nova aba
+      // - vídeo hospedado no Storage (provider storage/local, arquivo .mp4)
+      //   — embutido inline como <video>
+      // - gif hospedado no Storage — embutido inline como <img>
       // `is_default` só desempata quando há mais de uma do MESMO tipo.
-      const videosDisponiveis = midias.filter(m => m.type === 'video');
+      const videosExternos = midias.filter(m => m.type === 'video' && (m.provider === 'youtube' || m.provider === 'vimeo'));
+      const videosInline = midias.filter(m => m.type === 'video' && (m.provider === 'storage' || m.provider === 'local'));
       const gifsDisponiveis = midias.filter(m => m.type === 'gif');
-      const videoMedia = videosDisponiveis.find(m => m.is_default) || videosDisponiveis[0];
+      const videoExterno = videosExternos.find(m => m.is_default) || videosExternos[0];
+      const videoInline = videosInline.find(m => m.is_default) || videosInline[0];
       const gifMedia = gifsDisponiveis.find(m => m.is_default) || gifsDisponiveis[0];
       const seriesGranulares = (e.ficha_exercicio_series || []).slice().sort((a,b) => a.numero_serie - b.numero_serie);
 
       // `video_id` guarda coisas diferentes conforme o provider: ID do
       // vídeo no YouTube/Vimeo, ou o caminho do arquivo dentro do bucket
       // do Supabase Storage (nunca a URL completa) — a URL pública final
-      // é sempre montada aqui, igual já era feito só pra YouTube antes.
-      let mediaGifUrl = null;
-      if (gifMedia?.provider === 'storage' && gifMedia.video_id) {
-        const { data } = supabase.storage.from('exercicios-midia').getPublicUrl(gifMedia.video_id);
-        mediaGifUrl = data?.publicUrl || null;
-      } else if (gifMedia?.provider === 'local' && gifMedia.video_id) {
-        mediaGifUrl = gifMedia.video_id; // caminho já relativo ao próprio deploy
+      // é sempre montada aqui.
+      function urlDoStorage(media) {
+        if (!media?.video_id) return null;
+        if (media.provider === 'storage') {
+          const { data } = supabase.storage.from('exercicios-midia').getPublicUrl(media.video_id);
+          return data?.publicUrl || null;
+        }
+        if (media.provider === 'local') {
+          return media.video_id; // caminho já relativo ao próprio deploy
+        }
+        return null;
       }
 
       return {
         ...e,
         nome: e.exercises?.name_pt || e.nome || 'Exercício',
         grupo_muscular: primaryMuscle?.muscles?.name_pt || '',
-        video_url: videoMedia?.video_id ? `https://www.youtube.com/watch?v=${videoMedia.video_id}` : null,
-        media_gif_url: mediaGifUrl,
+        video_url: videoExterno?.video_id ? `https://www.youtube.com/watch?v=${videoExterno.video_id}` : null,
+        media_video_url: urlDoStorage(videoInline),
+        media_gif_url: urlDoStorage(gifMedia),
         descanso_series_seg: e.descanso_series_seg || 90,
         series_granulares: seriesGranulares
       };
