@@ -723,6 +723,11 @@
           <img src="${ex.media_gif_url}" alt="Demonstração: ${ex.nome}" loading="lazy" />
           <span class="drawer-gif-tag">GIF</span>
         </div>`;
+      } else if (ex.media_image_url) {
+        html += `<div class="drawer-gif-wrap">
+          <img src="${ex.media_image_url}" alt="Demonstração: ${ex.nome}" loading="lazy" />
+          <span class="drawer-gif-tag">IMAGEM</span>
+        </div>`;
       }
       if (ex.video_url) {
         html += `<a class="drawer-video" href="${ex.video_url}" target="_blank">▶ Ver execução completa no YouTube</a>`;
@@ -1006,6 +1011,11 @@
         html += `<div class="drawer-gif-wrap" style="max-height:220px;margin-bottom:20px">
           <img src="${ex.media_gif_url}" alt="Demonstração: ${ex.nome}" loading="lazy" />
           <span class="drawer-gif-tag">GIF</span>
+        </div>`;
+      } else if (ex.media_image_url) {
+        html += `<div class="drawer-gif-wrap" style="max-height:220px;margin-bottom:20px">
+          <img src="${ex.media_image_url}" alt="Demonstração: ${ex.nome}" loading="lazy" />
+          <span class="drawer-gif-tag">IMAGEM</span>
         </div>`;
       }
 

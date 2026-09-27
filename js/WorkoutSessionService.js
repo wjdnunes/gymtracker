@@ -58,18 +58,22 @@ export const WorkoutSessionService = {
     const exercicios = exs.map(e => {
       const primaryMuscle = e.exercises?.exercise_muscles?.find(em => em.role === 'primary');
       const midias = e.exercises?.exercise_media || [];
-      // Quatro combinações possíveis de mídia:
+      // Cinco combinações possíveis de mídia:
       // - vídeo externo (provider youtube/vimeo) — link, abre em nova aba
       // - vídeo hospedado no Storage (provider storage/local, arquivo .mp4)
       //   — embutido inline como <video>
       // - gif hospedado no Storage — embutido inline como <img>
+      // - imagem estática hospedada no Storage (jpg/png) — embutido
+      //   inline como <img> (mesmo elemento do gif, só sem animação)
       // `is_default` só desempata quando há mais de uma do MESMO tipo.
       const videosExternos = midias.filter(m => m.type === 'video' && (m.provider === 'youtube' || m.provider === 'vimeo'));
       const videosInline = midias.filter(m => m.type === 'video' && (m.provider === 'storage' || m.provider === 'local'));
       const gifsDisponiveis = midias.filter(m => m.type === 'gif');
+      const imagensDisponiveis = midias.filter(m => m.type === 'image');
       const videoExterno = videosExternos.find(m => m.is_default) || videosExternos[0];
       const videoInline = videosInline.find(m => m.is_default) || videosInline[0];
       const gifMedia = gifsDisponiveis.find(m => m.is_default) || gifsDisponiveis[0];
+      const imagemMedia = imagensDisponiveis.find(m => m.is_default) || imagensDisponiveis[0];
       const seriesGranulares = (e.ficha_exercicio_series || []).slice().sort((a,b) => a.numero_serie - b.numero_serie);
 
       // `video_id` guarda coisas diferentes conforme o provider: ID do
@@ -95,6 +99,7 @@ export const WorkoutSessionService = {
         video_url: videoExterno?.video_id ? `https://www.youtube.com/watch?v=${videoExterno.video_id}` : null,
         media_video_url: urlDoStorage(videoInline),
         media_gif_url: urlDoStorage(gifMedia),
+        media_image_url: urlDoStorage(imagemMedia),
         descanso_series_seg: e.descanso_series_seg || 90,
         series_granulares: seriesGranulares
       };
