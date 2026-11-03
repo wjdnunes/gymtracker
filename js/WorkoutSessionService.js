@@ -189,7 +189,7 @@ export const WorkoutSessionService = {
       .single();
     if (insErr) throw insErr;
 
-    const is_pr = await verificarPR(userId, exercicioNome, carga, reps, one_rm, serieDB.id);
+    const is_pr = await verificarPR(userId, exercicioNome, carga, reps, one_rm, serieDB.id, exerciseId);
 
     if (is_pr) {
       await supabase.from('series_executadas').update({ is_pr: true }).eq('id', serieDB.id);
