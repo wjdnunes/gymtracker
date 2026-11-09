@@ -4,6 +4,24 @@
 // ============================================================
 import { supabase } from './supabase.js';
 
+// ── Datas no fuso local (o toISOString() usa UTC e empurra treinos
+// da noite para o dia seguinte) ────────────────────────────
+export function chaveDiaLocal(d) {
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+// Semana começa na segunda-feira
+export function inicioDaSemana(d) {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
+  return x;
+}
+export function addDias(d, n) {
+  const x = new Date(d);
+  x.setDate(x.getDate() + n);
+  return x;
+}
+
 export const StatisticsEngine = {
 
   // ── Resumo geral do usuário ────────────────────────────
@@ -181,6 +199,50 @@ export const StatisticsEngine = {
       cursor.setDate(cursor.getDate() - 1);
     }
     return streak;
+  },
+
+  // ── Contagens leves para o Início (sem baixar séries) ──
+  async contagens(userId) {
+    const [{ count: totalSessoes }, { count: totalPRs }] = await Promise.all([
+      supabase.from('sessoes').select('*', { count: 'exact', head: true }).eq('user_id', userId).not('finalizado_em', 'is', null),
+      supabase.from('personal_records').select('*', { count: 'exact', head: true }).eq('user_id', userId)
+    ]);
+    return { totalSessoes: totalSessoes || 0, totalPRs: totalPRs || 0 };
+  },
+
+  // ── Sessões concluídas desde uma data (1 consulta só) ──
+  // Mais recente primeiro. Serve à faixa da semana e à sequência.
+  async sessoesDesde(userId, desdeISO, limite = 1000) {
+    const { data, error } = await supabase
+      .from('sessoes')
+      .select('*')
+      .eq('user_id', userId)
+      .not('finalizado_em', 'is', null)
+      .gte('iniciado_em', desdeISO)
+      .order('iniciado_em', { ascending: false })
+      .limit(limite);
+    if (error) throw error;
+    return data || [];
+  },
+
+  // ── Sequência em semanas seguidas que bateram a meta ───
+  // Semana atual ainda em andamento não quebra a sequência: se a meta
+  // dela ainda não foi batida, a contagem parte da semana passada.
+  sequenciaSemanas(sessoes, metaSemanal, hoje = new Date()) {
+    const meta = Math.max(1, metaSemanal || 1);
+    const porSemana = new Map();
+    (sessoes || []).forEach(s => {
+      const k = chaveDiaLocal(inicioDaSemana(new Date(s.iniciado_em)));
+      porSemana.set(k, (porSemana.get(k) || 0) + 1);
+    });
+    let cursor = inicioDaSemana(hoje);
+    if ((porSemana.get(chaveDiaLocal(cursor)) || 0) < meta) cursor = addDias(cursor, -7);
+    let n = 0;
+    while ((porSemana.get(chaveDiaLocal(cursor)) || 0) >= meta) {
+      n++;
+      cursor = addDias(cursor, -7);
+    }
+    return n;
   },
 
   // ── Alertas do ProgressEngine ──────────────────────────

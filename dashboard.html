@@ -8,10 +8,11 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
   <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-  <title>GymTracker — Dashboard</title>
+  <title>GymTracker — Início</title>
   <link rel="stylesheet" href="css/global.css" />
   <style>
-    .content { padding: 32px 0 64px; }
+    [hidden] { display: none !important; }
+    .content { padding: 24px 0 64px; }
 
     /* Splash screen (aparece só na primeira carga do PWA) */
     #app-splash {
@@ -48,66 +49,210 @@
       pointer-events: none;
     }
 
-    .welcome-bar {
-      margin-bottom: 32px;
+    button:focus-visible, a:focus-visible {
+      outline: 2px solid var(--orange);
+      outline-offset: 2px;
     }
-    .welcome-bar h1 { font-size: 1.8rem; }
-    .welcome-bar p { color: var(--text-2); margin-top: 4px; }
 
-    /* Stats strip */
-    .stats-strip {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
+    /* ── Topo ─────────────────────────────────────────── */
+    .topo {
+      position: relative;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
       gap: 12px;
-      margin-bottom: 32px;
+      margin-bottom: 20px;
     }
+    .topo h1 { font-size: 1.9rem; line-height: 1.1; }
+    .topo p { color: var(--text-2); font-size: 14px; margin-top: 4px; }
 
-    .stat-card {
+    .ajustes-btn {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: var(--bg-3);
+      border: 1px solid var(--border);
+      color: var(--text-2);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .ajustes-menu {
+      position: absolute;
+      top: 50px;
+      right: 0;
+      z-index: 50;
+      min-width: 210px;
+      padding: 6px;
       background: var(--bg-2);
       border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 20px;
+      border-radius: var(--radius);
+      box-shadow: 0 12px 32px rgba(0,0,0,.5);
     }
-
-    .stat-card .label {
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-3);
-      margin-bottom: 8px;
-    }
-
-    .stat-card .value {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 2rem;
-      font-weight: 700;
+    .ajustes-menu a, .ajustes-menu button {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 13px 12px;
+      background: none;
+      border: 0;
+      border-radius: 8px;
       color: var(--text);
-      line-height: 1;
+      font: 500 15px/1.2 'Inter', system-ui, sans-serif;
+      text-align: left;
+      text-decoration: none;
+      cursor: pointer;
     }
-
-    .stat-card .value.orange { color: var(--orange); }
-
-    .stat-card .sub {
-      font-size: 12px;
-      color: var(--text-3);
-      margin-top: 4px;
-    }
-
-    /* Seções principais */
-    .main-grid {
-      display: grid;
-      grid-template-columns: 1fr 340px;
-      gap: 24px;
-    }
+    .ajustes-menu a:active, .ajustes-menu button:active { background: var(--bg-3); }
+    .ajustes-menu .sair { color: var(--red, #ef4444); }
 
     @media (max-width: 768px) {
       .content { padding: 20px 0 48px; }
-      .stats-strip { grid-template-columns: repeat(2, 1fr); }
-      .main-grid { grid-template-columns: 1fr; }
+      .ajustes-btn { display: flex; }
     }
 
-    /* Fichas rápidas */
+    /* ── Layout ───────────────────────────────────────── */
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+    .col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+    @media (min-width: 900px) {
+      .layout { grid-template-columns: minmax(0, 440px) minmax(0, 1fr); gap: 24px; align-items: start; }
+    }
+
+    .bloco {
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 18px 16px;
+    }
+
+    /* ── Faixa da semana ──────────────────────────────── */
+    .semana-topo {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .semana-titulo { font-weight: 600; font-size: 14px; color: var(--text-2); }
+    .nav-sem {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: none;
+      border: 0;
+      color: var(--text-2);
+      font-size: 24px;
+      line-height: 1;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .nav-sem:disabled { opacity: .25; cursor: default; }
+
+    .semana-dias {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 2px;
+      text-align: center;
+    }
+    .dia { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .dia-letra { font-size: 12px; font-weight: 600; color: var(--text-3); }
+    .dia-num {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .dia.futuro .dia-num { color: var(--text-3); }
+    .dia.hoje .dia-num { background: var(--orange); color: #fff; }
+    .dia-ponto { width: 6px; height: 6px; border-radius: 50%; background: transparent; }
+    .dia.treinou .dia-ponto { background: var(--orange); }
+
+    .meta-btn {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px 8px;
+      background: none;
+      border: 0;
+      color: var(--text-2);
+      font: 500 13px/1.3 'Inter', system-ui, sans-serif;
+      text-align: center;
+      cursor: pointer;
+    }
+    .meta-btn.batida { color: var(--orange); }
+    .meta-editor {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      margin-top: 4px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--text-2);
+    }
+    .meta-editor button {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--bg-3);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 20px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .meta-editor button:disabled { opacity: .3; cursor: default; }
+    .meta-valor {
+      min-width: 22px;
+      text-align: center;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    /* ── Treino de hoje ───────────────────────────────── */
+    .hoje {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      border-color: var(--orange);
+    }
+    .hoje-info { min-width: 0; }
+    .hoje-rotulo { font-size: 13px; color: var(--text-2); }
+    .hoje-nome {
+      margin-top: 2px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1.1;
+      overflow-wrap: anywhere;
+    }
+    .hoje-sub { margin-top: 4px; font-size: 13px; color: var(--text-2); }
+    .hoje .btn { flex-shrink: 0; }
+
+    .outra-btn {
+      display: block;
+      width: 100%;
+      margin-top: -4px;
+      padding: 12px;
+      background: none;
+      border: 0;
+      color: var(--text-2);
+      font: 500 14px/1.2 'Inter', system-ui, sans-serif;
+      cursor: pointer;
+    }
+    .outras { display: flex; flex-direction: column; gap: 8px; margin-top: -4px; }
+
     .ficha-item {
       display: flex;
       align-items: center;
@@ -120,84 +265,52 @@
       cursor: pointer;
       text-decoration: none;
     }
-
-    .ficha-item:hover {
-      border-color: var(--orange);
-    }
-
-    .ficha-item-info { flex: 1; }
+    .ficha-item:hover { border-color: var(--orange); }
+    .ficha-item-info { flex: 1; min-width: 0; }
     .ficha-item-nome { font-weight: 600; font-size: 15px; color: var(--text); }
     .ficha-item-sub { font-size: 12px; color: var(--text-2); margin-top: 2px; }
-
-    .ficha-item .arrow {
-      color: var(--text-3);
-      font-size: 18px;
-      transition: color .15s;
-    }
+    .ficha-item .arrow { color: var(--text-3); font-size: 18px; }
     .ficha-item:hover .arrow { color: var(--orange); }
 
-    /* Sessões recentes */
-    .sessao-item {
-      padding: 14px 0;
-      border-bottom: 1px solid var(--border);
+    /* ── Sequência ────────────────────────────────────── */
+    .seq { display: flex; align-items: center; gap: 16px; }
+    .seq-num {
+      min-width: 44px;
+      text-align: center;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 2.4rem;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--orange);
     }
-    .sessao-item:last-child { border-bottom: none; }
-    .sessao-item-top { display: flex; justify-content: space-between; align-items: center; }
+    .seq-titulo { font-weight: 600; font-size: 15px; }
+    .seq-sub { margin-top: 3px; font-size: 13px; color: var(--text-2); }
+
+    /* ── Últimos treinos ──────────────────────────────── */
+    .bloco-topo {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .bloco-titulo { font-weight: 600; font-size: 15px; }
+    .sessao-item { padding: 14px 0; border-bottom: 1px solid var(--border); }
+    .sessao-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .sessao-item-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
     .sessao-item-nome { font-weight: 600; font-size: 14px; }
-    .sessao-item-data { font-size: 12px; color: var(--text-3); }
+    .sessao-item-data { font-size: 12px; color: var(--text-3); white-space: nowrap; }
     .sessao-item-meta { font-size: 12px; color: var(--text-2); margin-top: 4px; }
-
-    /* Quick action */
-    .quick-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .quick-action-btn {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding: 16px 18px;
-      background: var(--bg-3);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      cursor: pointer;
-      text-decoration: none;
-      transition: all .15s;
-    }
-
-    .quick-action-btn:hover {
-      border-color: var(--orange);
-      background: var(--bg-4);
-    }
-
-    .quick-action-icon {
-      width: 38px;
-      height: 38px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      flex-shrink: 0;
-    }
-
-    .quick-action-icon.orange { background: var(--orange-glow); }
-    .quick-action-icon.green  { background: rgba(34,197,94,0.1); }
-    .quick-action-icon.blue   { background: rgba(59,130,246,0.1); }
-
-    .quick-action-text .title { font-weight: 600; font-size: 14px; color: var(--text); }
-    .quick-action-text .sub   { font-size: 12px; color: var(--text-2); margin-top: 2px; }
-
-    .section-title {
+    .badge-pr {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 1px 8px;
+      border-radius: 999px;
       font-size: 11px;
       font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--text-3);
-      margin-bottom: 14px;
+      color: var(--orange);
+      background: var(--orange-glow);
     }
+    .vazio { color: var(--text-3); text-align: center; padding: 24px 8px; font-size: 14px; }
   </style>
 </head>
 <body>
@@ -229,90 +342,66 @@
   <div class="page-wrapper">
     <div class="content">
 
-      <!-- Welcome -->
-      <div class="welcome-bar flex-between">
+      <!-- Topo -->
+      <div class="topo">
         <div>
-          <h1>Olá, <span id="nome-usuario" style="color:var(--orange)">—</span> 💪</h1>
-          <p id="msg-dia">Carregando...</p>
+          <h1>Início</h1>
+          <p id="data-hoje"></p>
         </div>
-        <a href="/treino.html" class="btn btn-primary btn-lg">
-          ▶ Iniciar treino
-        </a>
-      </div>
-
-      <!-- Stats -->
-      <div class="stats-strip">
-        <div class="stat-card">
-          <div class="label">Treinos esta semana</div>
-          <div class="value orange" id="stat-semana">—</div>
-          <div class="sub" id="stat-semana-sub">carregando</div>
-        </div>
-        <div class="stat-card">
-          <div class="label">Total de treinos</div>
-          <div class="value" id="stat-total">—</div>
-          <div class="sub">sessões concluídas</div>
-        </div>
-        <div class="stat-card">
-          <div class="label">Sequência atual</div>
-          <div class="value" id="stat-streak">—</div>
-          <div class="sub">dias consecutivos</div>
-        </div>
-        <div class="stat-card">
-          <div class="label">PRs registrados</div>
-          <div class="value" id="stat-prs">—</div>
-          <div class="sub">recordes pessoais</div>
+        <button type="button" class="ajustes-btn" id="ajustes-btn" aria-label="Ajustes" aria-haspopup="menu" aria-expanded="false">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+            <path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>
+          </svg>
+        </button>
+        <div class="ajustes-menu" id="ajustes-menu" role="menu" hidden>
+          <a href="/perfil.html" role="menuitem">Perfil</a>
+          <a href="/avaliacao-fisica.html" role="menuitem">Avaliação física</a>
+          <button type="button" class="sair" role="menuitem" onclick="sair()">Sair</button>
         </div>
       </div>
 
-      <!-- Grid principal -->
-      <div class="main-grid">
+      <div class="layout">
 
-        <!-- Esquerda: fichas + histórico -->
-        <div>
-          <div class="card" style="margin-bottom:24px">
-            <div class="flex-between" style="margin-bottom:16px">
-              <div class="section-title" style="margin:0">Suas fichas</div>
-              <a href="/fichas.html" class="btn btn-ghost btn-sm">Ver todas</a>
-            </div>
-            <div id="fichas-lista" style="display:flex;flex-direction:column;gap:8px">
-              <div style="color:var(--text-3);text-align:center;padding:24px">Carregando...</div>
-            </div>
-          </div>
+        <!-- Esquerda: semana, treino de hoje, sequência -->
+        <div class="col">
 
-          <div class="card">
-            <div class="section-title">Últimos treinos</div>
-            <div id="sessoes-lista">
-              <div style="color:var(--text-3);text-align:center;padding:24px">Carregando...</div>
+          <section class="bloco" aria-label="Semana">
+            <div class="semana-topo">
+              <button type="button" class="nav-sem" id="sem-ant" aria-label="Semana anterior">‹</button>
+              <div class="semana-titulo" id="sem-titulo">Esta semana</div>
+              <button type="button" class="nav-sem" id="sem-prox" aria-label="Próxima semana">›</button>
             </div>
-          </div>
+            <div class="semana-dias" id="sem-dias"></div>
+            <button type="button" class="meta-btn" id="meta-btn" aria-expanded="false"></button>
+            <div class="meta-editor" id="meta-editor" hidden>
+              <span>Treinos por semana</span>
+              <button type="button" id="meta-menos" aria-label="Diminuir meta">−</button>
+              <span class="meta-valor" id="meta-valor">3</span>
+              <button type="button" id="meta-mais" aria-label="Aumentar meta">+</button>
+            </div>
+          </section>
+
+          <section id="hoje-area" aria-label="Treino de hoje"></section>
+
+          <section class="bloco seq" aria-label="Sequência">
+            <div class="seq-num" id="seq-num">0</div>
+            <div>
+              <div class="seq-titulo" id="seq-titulo">semanas seguidas na meta</div>
+              <div class="seq-sub" id="seq-sub"></div>
+            </div>
+          </section>
+
         </div>
 
-        <!-- Direita: ações rápidas -->
-        <div>
-          <div class="section-title">Ações rápidas</div>
-          <div class="quick-actions">
-            <a href="/treino.html" class="quick-action-btn">
-              <div class="quick-action-icon orange">🏋️</div>
-              <div class="quick-action-text">
-                <div class="title">Iniciar treino</div>
-                <div class="sub">Selecione uma ficha e treine</div>
-              </div>
-            </a>
-            <a href="/fichas.html" class="quick-action-btn">
-              <div class="quick-action-icon blue">📋</div>
-              <div class="quick-action-text">
-                <div class="title">Gerenciar fichas</div>
-                <div class="sub">Crie e edite seus treinos</div>
-              </div>
-            </a>
-            <a href="/historico.html" class="quick-action-btn">
-              <div class="quick-action-icon green">📈</div>
-              <div class="quick-action-text">
-                <div class="title">Ver evolução</div>
-                <div class="sub">Histórico e recordes pessoais</div>
-              </div>
-            </a>
-          </div>
+        <!-- Direita: últimos treinos -->
+        <div class="col">
+          <section class="bloco" aria-label="Últimos treinos">
+            <div class="bloco-topo">
+              <div class="bloco-titulo">Últimos treinos</div>
+              <a href="/historico.html" class="btn btn-ghost btn-sm">Ver histórico</a>
+            </div>
+            <div id="sessoes-lista"><div class="vazio">Carregando...</div></div>
+          </section>
         </div>
 
       </div>
@@ -320,8 +409,8 @@
   </div>
 
   <script type="module">
-    import { supabase, requireAuth, showToast } from './js/supabase.js';
-    import { StatisticsEngine } from './js/StatisticsEngine.js';
+    import { supabase, requireAuth } from './js/supabase.js';
+    import { StatisticsEngine, chaveDiaLocal, inicioDaSemana, addDias } from './js/StatisticsEngine.js';
     import { WorkoutService } from './js/WorkoutService.js';
 
     const splashInicio = Date.now();
@@ -338,85 +427,258 @@
     // algo der errado no carregamento dos dados abaixo.
     setTimeout(esconderSplash, 6000);
 
-    const user = await requireAuth();
-    if (!user) { window.location.href = "/index.html"; throw new Error("unauth"); }
-
-    // Nome do usuário
-    const nome = user.user_metadata?.nome || user.email.split('@')[0];
-    document.getElementById('nome-usuario').textContent = nome;
-    document.getElementById('user-nome').textContent = nome;
-
-    // Mensagem do dia
-    const hora = new Date().getHours();
-    const msg = hora < 12 ? 'Bom dia! Pronto para treinar?' : hora < 18 ? 'Boa tarde! Hora de ir à academia.' : 'Boa noite! Consistência é tudo.';
-    document.getElementById('msg-dia').textContent = msg;
-
-    // Carregar dados em paralelo (via Services/Engines, não query solta)
-    const [resumo, streak, todasFichas, sessoes] = await Promise.all([
-      StatisticsEngine.resumoGeral(user.id),
-      StatisticsEngine.sequenciaAtual(user.id),
-      WorkoutService.listarFichas(user.id),
-      StatisticsEngine.listarSessoes(user.id, 5)
-    ]);
-    const fichas = todasFichas.slice(0, 5);
-
-    // Stats
-    document.getElementById('stat-total').textContent = resumo.totalSessoes;
-    document.getElementById('stat-prs').textContent = resumo.totalPRs;
-    document.getElementById('stat-semana').textContent = resumo.semanal;
-    document.getElementById('stat-semana-sub').textContent = resumo.semanal === 1 ? '1 treino' : `${resumo.semanal} treinos`;
-    document.getElementById('stat-streak').textContent = streak;
-
-    // Fichas
-    const fichasEl = document.getElementById('fichas-lista');
-    if (!fichas?.length) {
-      fichasEl.innerHTML = `
-        <div class="empty-state" style="padding:24px">
-          <p>Nenhuma ficha criada ainda.</p>
-          <a href="/fichas.html" class="btn btn-primary">Criar primeira ficha</a>
-        </div>`;
-    } else {
-      fichasEl.innerHTML = fichas.map(f => `
-        <a class="ficha-item" href="/treino.html?ficha=${f.id}">
-          <div class="ficha-item-info">
-            <div class="ficha-item-nome">${f.nome}</div>
-            ${f.descricao ? `<div class="ficha-item-sub">${f.descricao}</div>` : ''}
-          </div>
-          <div class="arrow">›</div>
-        </a>`).join('');
-    }
-
-    // Sessões recentes
-    const sessoesEl = document.getElementById('sessoes-lista');
-    if (!sessoes?.length) {
-      sessoesEl.innerHTML = `<div style="color:var(--text-3);text-align:center;padding:24px">Nenhum treino registrado ainda.</div>`;
-    } else {
-      sessoesEl.innerHTML = sessoes.map(s => {
-        const data = new Date(s.iniciado_em);
-        const dataStr = data.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
-        const dur = s.duracao_min ? `${s.duracao_min} min` : '—';
-        return `
-          <div class="sessao-item">
-            <div class="sessao-item-top">
-              <div class="sessao-item-nome">${s.ficha_nome || 'Treino livre'}</div>
-              <div class="sessao-item-data">${dataStr}</div>
-            </div>
-            <div class="sessao-item-meta">Duração: ${dur}</div>
-          </div>`;
-      }).join('');
-    }
-
-    esconderSplash();
-
     window.sair = async () => {
       await supabase.auth.signOut();
       window.location.href = '/index.html';
     };
+
+    const user = await requireAuth();
+    if (!user) { window.location.href = "/index.html"; throw new Error("unauth"); }
+
+    const nome = user.user_metadata?.nome || user.email.split('@')[0];
+    document.getElementById('user-nome').textContent = nome;
+
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+    ));
+    const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
+    const $ = id => document.getElementById(id);
+
+    // Data de hoje
+    const dataTxt = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+    $('data-hoje').textContent = dataTxt.charAt(0).toUpperCase() + dataTxt.slice(1);
+
+    // ── Menu de ajustes (só aparece no celular) ──────────
+    const ajustesBtn = $('ajustes-btn');
+    const ajustesMenu = $('ajustes-menu');
+    function fecharAjustes() {
+      ajustesMenu.hidden = true;
+      ajustesBtn.setAttribute('aria-expanded', 'false');
+    }
+    ajustesBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      const abrir = ajustesMenu.hidden;
+      ajustesMenu.hidden = !abrir;
+      ajustesBtn.setAttribute('aria-expanded', String(abrir));
+    });
+    document.addEventListener('click', e => {
+      if (!ajustesMenu.hidden && !ajustesMenu.contains(e.target)) fecharAjustes();
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharAjustes(); });
+
+    // ── Dados ────────────────────────────────────────────
+    let contagens, sessoesAll, fichas, ultimas;
+    try {
+      [contagens, sessoesAll, fichas, ultimas] = await Promise.all([
+        StatisticsEngine.contagens(user.id),
+        StatisticsEngine.sessoesDesde(user.id, addDias(new Date(), -400).toISOString()),
+        WorkoutService.listarFichas(user.id),
+        StatisticsEngine.listarSessoes(user.id, 5)
+      ]);
+    } catch (err) {
+      console.error('Falha ao carregar o Início:', err);
+      $('sessoes-lista').innerHTML = '<div class="vazio">Não foi possível carregar os dados. Feche e abra o app para tentar de novo.</div>';
+      esconderSplash();
+      throw err;
+    }
+
+    // Treinos por dia (fuso local)
+    const porDia = new Map();
+    sessoesAll.forEach(s => {
+      const k = chaveDiaLocal(new Date(s.iniciado_em));
+      porDia.set(k, (porDia.get(k) || 0) + 1);
+    });
+
+    // ── Meta semanal (padrão: nº de fichas ativas; salva no aparelho) ──
+    const META_CHAVE = 'gt_meta_semanal';
+    function lerMeta() {
+      try {
+        const v = parseInt(localStorage.getItem(META_CHAVE), 10);
+        if (v >= 1 && v <= 7) return v;
+      } catch (e) { /* sem storage: usa o padrão */ }
+      return Math.min(7, Math.max(1, fichas.length || 3));
+    }
+    function salvarMeta(v) {
+      try { localStorage.setItem(META_CHAVE, String(v)); } catch (e) { /* ignora */ }
+    }
+    let meta = lerMeta();
+    let offset = 0; // 0 = esta semana, -1 = semana passada...
+    const OFFSET_MIN = -52;
+
+    // ── Faixa da semana ──────────────────────────────────
+    const LETRAS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
+    const NOMES = ['segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado', 'domingo'];
+
+    function renderSemana() {
+      const agora = new Date();
+      const hojeKey = chaveDiaLocal(agora);
+      const ini = addDias(inicioDaSemana(agora), offset * 7);
+
+      let total = 0;
+      let html = '';
+      for (let i = 0; i < 7; i++) {
+        const d = addDias(ini, i);
+        const key = chaveDiaLocal(d);
+        const n = porDia.get(key) || 0;
+        total += n;
+        const cls = ['dia'];
+        if (key === hojeKey) cls.push('hoje');
+        if (key > hojeKey) cls.push('futuro');
+        if (n > 0) cls.push('treinou');
+        html += `<div class="${cls.join(' ')}" title="${NOMES[i]}, ${d.getDate()}${n ? ' — treinou' : ''}">
+          <span class="dia-letra">${LETRAS[i]}</span>
+          <span class="dia-num">${d.getDate()}</span>
+          <span class="dia-ponto"></span>
+        </div>`;
+      }
+      $('sem-dias').innerHTML = html;
+
+      $('sem-titulo').textContent =
+        offset === 0 ? 'Esta semana' :
+        offset === -1 ? 'Semana passada' :
+        'Semana de ' + ini.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' });
+      $('sem-prox').disabled = offset >= 0;
+      $('sem-ant').disabled = offset <= OFFSET_MIN;
+
+      const metaBtn = $('meta-btn');
+      metaBtn.classList.remove('batida');
+      if (offset === 0) {
+        const falta = meta - total;
+        if (falta > 0) {
+          metaBtn.textContent = `Faltam ${falta} de ${meta} nesta semana`;
+        } else {
+          metaBtn.textContent = `Meta da semana batida: ${total} de ${meta}`;
+          metaBtn.classList.add('batida');
+        }
+      } else {
+        metaBtn.textContent = `${plural(total, 'treino', 'treinos')} nessa semana (meta ${meta})`;
+      }
+      $('meta-valor').textContent = meta;
+      $('meta-menos').disabled = meta <= 1;
+      $('meta-mais').disabled = meta >= 7;
+    }
+
+    $('sem-ant').addEventListener('click', () => { if (offset > OFFSET_MIN) { offset--; renderSemana(); } });
+    $('sem-prox').addEventListener('click', () => { if (offset < 0) { offset++; renderSemana(); } });
+    $('meta-btn').addEventListener('click', () => {
+      const editor = $('meta-editor');
+      editor.hidden = !editor.hidden;
+      $('meta-btn').setAttribute('aria-expanded', String(!editor.hidden));
+    });
+    function mudarMeta(delta) {
+      const novo = Math.min(7, Math.max(1, meta + delta));
+      if (novo === meta) return;
+      meta = novo;
+      salvarMeta(meta);
+      renderSemana();
+      renderSequencia();
+    }
+    $('meta-menos').addEventListener('click', () => mudarMeta(-1));
+    $('meta-mais').addEventListener('click', () => mudarMeta(1));
+
+    // ── Treino de hoje: próxima ficha na rotação ─────────
+    function proximaFicha() {
+      if (!fichas.length) return null;
+      const ultima = sessoesAll[0]; // mais recente primeiro
+      let idx = -1;
+      if (ultima) {
+        if (ultima.ficha_id) idx = fichas.findIndex(f => f.id === ultima.ficha_id);
+        if (idx === -1 && ultima.ficha_nome) idx = fichas.findIndex(f => f.nome === ultima.ficha_nome);
+      }
+      return fichas[(idx + 1) % fichas.length]; // idx -1 → primeira ficha
+    }
+
+    function renderHoje() {
+      const area = $('hoje-area');
+      const prox = proximaFicha();
+      if (!prox) {
+        area.innerHTML = `
+          <div class="bloco">
+            <div class="vazio" style="padding:8px 0 16px">Nenhuma ficha criada ainda.</div>
+            <a href="/fichas.html" class="btn btn-primary" style="display:flex;justify-content:center">Criar primeira ficha</a>
+          </div>`;
+        return;
+      }
+      const treinouHoje = (porDia.get(chaveDiaLocal(new Date())) || 0) > 0;
+      const outras = fichas.length > 1;
+      area.innerHTML = `
+        <div class="bloco hoje">
+          <div class="hoje-info">
+            <div class="hoje-rotulo">${treinouHoje ? 'Próximo treino' : 'Hoje'}</div>
+            <div class="hoje-nome">${esc(prox.nome)}</div>
+            ${prox.descricao ? `<div class="hoje-sub">${esc(prox.descricao)}</div>` : ''}
+          </div>
+          <a href="/treino.html?ficha=${encodeURIComponent(prox.id)}" class="btn btn-primary btn-lg">Começar</a>
+        </div>
+        ${outras ? `<button type="button" class="outra-btn" id="outra-btn" aria-expanded="false">Escolher outra ficha</button>
+        <div class="outras" id="outras" hidden>
+          ${fichas.map(f => `
+            <a class="ficha-item" href="/treino.html?ficha=${encodeURIComponent(f.id)}">
+              <div class="ficha-item-info">
+                <div class="ficha-item-nome">${esc(f.nome)}</div>
+                ${f.descricao ? `<div class="ficha-item-sub">${esc(f.descricao)}</div>` : ''}
+              </div>
+              <div class="arrow">›</div>
+            </a>`).join('')}
+        </div>` : ''}`;
+      const outraBtn = $('outra-btn');
+      if (outraBtn) {
+        outraBtn.addEventListener('click', () => {
+          const lista = $('outras');
+          lista.hidden = !lista.hidden;
+          outraBtn.setAttribute('aria-expanded', String(!lista.hidden));
+          outraBtn.textContent = lista.hidden ? 'Escolher outra ficha' : 'Fechar lista';
+        });
+      }
+    }
+
+    // ── Sequência em semanas ─────────────────────────────
+    function renderSequencia() {
+      const n = StatisticsEngine.sequenciaSemanas(sessoesAll, meta);
+      $('seq-num').textContent = n;
+      $('seq-titulo').textContent = n === 1 ? 'semana seguida na meta' : 'semanas seguidas na meta';
+      $('seq-sub').textContent =
+        `${plural(contagens.totalSessoes, 'treino', 'treinos')} no total · ` +
+        `${plural(contagens.totalPRs, 'recorde', 'recordes')}`;
+    }
+
+    // ── Últimos treinos ──────────────────────────────────
+    function renderUltimos() {
+      const el = $('sessoes-lista');
+      if (!ultimas?.length) {
+        el.innerHTML = '<div class="vazio">Nenhum treino registrado ainda.</div>';
+        return;
+      }
+      el.innerHTML = ultimas.map(s => {
+        const data = new Date(s.iniciado_em);
+        const dataStr = data.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
+        const partes = [
+          s.duracao_min ? `${s.duracao_min} min` : null,
+          s.volume ? `${s.volume.toLocaleString('pt-BR')} kg` : null,
+          s.total_series ? plural(s.total_series, 'série', 'séries') : null
+        ].filter(Boolean);
+        return `
+          <div class="sessao-item">
+            <div class="sessao-item-top">
+              <div class="sessao-item-nome">${esc(s.ficha_nome || 'Treino livre')}${s.prs ? `<span class="badge-pr">${s.prs} PR</span>` : ''}</div>
+              <div class="sessao-item-data">${dataStr}</div>
+            </div>
+            <div class="sessao-item-meta">${partes.length ? partes.join(' · ') : '—'}</div>
+          </div>`;
+      }).join('');
+    }
+
+    renderSemana();
+    renderHoje();
+    renderSequencia();
+    renderUltimos();
+    esconderSplash();
   </script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
     }
   </script>
+<script src="/js/bottom-nav.js" defer></script>
 </body>
 </html>
